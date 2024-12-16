@@ -6,9 +6,13 @@ import net.minecraft.client.render.RenderLayer
 import tree.maple.kasima.blocks.KasimaBlockRegistry
 
 object KasiMaClient : ClientModInitializer {
-	override fun onInitializeClient() {
-		// This entrypoint is suitable for setting up client-specific logic, such as rendering.
+    override fun onInitializeClient() {
+        // This entrypoint is suitable for setting up client-specific logic, such as rendering.
 
-		BlockRenderLayerMap.INSTANCE.putBlock(KasimaBlockRegistry.OAK_RUNE_LOG, RenderLayer.getTranslucent())
-	}
+        BlockRenderLayerMap.INSTANCE.putBlocks(
+            RenderLayer.getTranslucent(),
+            KasimaBlockRegistry.OAK_RUNE_LOG,
+            KasimaBlockRegistry.OAK_RUNE_CORE
+        )
+    }
 }

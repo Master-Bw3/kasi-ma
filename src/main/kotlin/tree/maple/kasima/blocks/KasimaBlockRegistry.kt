@@ -25,11 +25,19 @@ object KasimaBlockRegistry {
         ), "oak_rune_log", false
     )
 
+    val OAK_RUNE_CORE = register(
+        ::RuneCore, Blocks.createLogSettings(
+            MapColor.OAK_TAN,
+            MapColor.SPRUCE_BROWN,
+            BlockSoundGroup.WOOD
+        ), "oak_rune_core", false
+    )
+
     private fun <T : Block> register(
         constructor: (AbstractBlock.Settings) -> T,
         settings: AbstractBlock.Settings,
         name: String,
-        shouldRegisterItem: Boolean
+        registerItem: Boolean
     ): T {
         // Register the block and its item.
         val id: Identifier = Identifier.of(KasiMa.id, name)
@@ -38,7 +46,7 @@ object KasimaBlockRegistry {
 
         // Sometimes, you may not want to register an item for the block.
         // Eg: if it's a technical block like `minecraft:air` or `minecraft:end_gateway`
-        if (shouldRegisterItem) {
+        if (registerItem) {
             val itemKey = RegistryKey.of(RegistryKeys.ITEM, id)
             val blockItem = BlockItem(
                 block,

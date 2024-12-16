@@ -4,6 +4,7 @@ import net.fabricmc.api.ModInitializer
 import net.minecraft.util.Identifier
 import org.slf4j.LoggerFactory
 import tree.maple.kasima.blocks.KasimaBlockRegistry
+import tree.maple.kasima.blocks.blockEntities.KasimaBlockEntityTypeRegistry
 import tree.maple.kasima.spellEngine.ASTNode
 import tree.maple.kasima.spellEngine.TypeError
 import tree.maple.kasima.spellEngine.compile
@@ -28,6 +29,7 @@ object KasiMa : ModInitializer {
         logger.info("Hello Fabric world!")
 
         KasimaBlockRegistry.initialize()
+        KasimaBlockEntityTypeRegistry.initialize()
         TypeRegistry.initialize()
 
 
