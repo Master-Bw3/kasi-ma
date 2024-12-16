@@ -15,7 +15,7 @@ import net.minecraft.util.Identifier
 import tree.maple.kasima.KasiMa
 
 
-object KasimaBlocks {
+object KasimaBlockRegistry {
 
     val OAK_RUNE_LOG = register(
         ::RuneLog, Blocks.createLogSettings(

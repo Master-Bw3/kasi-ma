@@ -25,9 +25,9 @@ fun compile(node: ASTNode) : Rune {
 
 
     return object : Rune() {
-        override val arguments: List<Type<*>> = handle.type().parameterList().map { Type.of(it) }
+        override val arguments: List<Type<*>> = handle.type().parameterList().map { Type.fromRawType(it.kotlin) }
 
-        override val returnType: Type<*> = Type.of(handle.type().returnType())
+        override val returnType: Type<*> = Type.fromRawType(handle.type().returnType().kotlin)
 
         override val handle: MethodHandle = handle
     }

@@ -9,8 +9,18 @@ abstract class Type<T: Value> {
     abstract val rawType : KClass<*>
 
     companion object {
-        fun of(value: Any) : Type<*> {
-            TODO()
+
+        fun fromRawType(value: KClass<*>) : Type<*> {
+            val entries = TypeRegistry.REGISTRY.entrySet.map { it.value }
+
+            entries.forEach {
+                val rawType = it.rawType
+                if (value == rawType) {
+                    return it
+                }
+            }
+
+            throw IllegalArgumentException()
         }
     }
 }
