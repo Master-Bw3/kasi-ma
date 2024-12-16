@@ -8,6 +8,7 @@ import tree.maple.kasima.spellEngine.ASTNode
 import tree.maple.kasima.spellEngine.compile
 import tree.maple.kasima.spellEngine.runes.RuneAdd
 import tree.maple.kasima.spellEngine.runes.RuneOne
+import tree.maple.kasima.spellEngine.typeCheck
 import tree.maple.kasima.spellEngine.types.TypeRegistry
 
 object KasiMa : ModInitializer {
@@ -38,9 +39,9 @@ object KasiMa : ModInitializer {
             ))
         ))
 
-        val compiled = compile(ast)
+        println(typeCheck(ast))
 
 
-        println(compiled.handle.invoke())
+
     }
 }

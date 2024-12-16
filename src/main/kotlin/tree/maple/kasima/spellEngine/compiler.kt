@@ -32,3 +32,21 @@ fun compile(node: ASTNode) : Rune {
         override val handle: MethodHandle = handle
     }
 }
+
+data class TypeError(val node: ASTNode, val expected: Type<*>, val actual: Type<*>?) : Throwable()
+
+fun typeCheck(node: ASTNode) : Type<*> {
+    val expectedArgTypes = node.rune.arguments
+    val argTypes = node.args.map { typeCheck(it) }
+
+    expectedArgTypes.forEachIndexed { i, expected ->
+        val actual = argTypes.getOrNull(i)
+
+        if (expected != actual) {
+            throw TypeError(node, expected, actual)
+        }
+    }
+
+    return node.rune.returnType
+}
+
