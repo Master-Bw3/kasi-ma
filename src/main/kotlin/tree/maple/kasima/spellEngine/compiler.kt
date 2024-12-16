@@ -1,26 +1,53 @@
 package tree.maple.kasima.spellEngine
 
+import com.google.common.collect.HashMultiset
+import com.google.common.collect.ImmutableMultiset
+import com.google.common.collect.Multiset
 import tree.maple.kasima.spellEngine.runes.Rune
 import tree.maple.kasima.spellEngine.types.Type
 import java.lang.invoke.MethodHandle
 import java.lang.invoke.MethodHandles
 
-data class ASTNode(val rune: Rune, val args: List<ASTNode>)
 
+sealed class ValidationState {
+    class Validated : ValidationState()
 
-fun compileToHandle(node: ASTNode): MethodHandle {
-    var handle = node.rune.handle
-
-    for (argNode in node.args) {
-        val argHandle = compileToHandle(argNode)
-
-        handle = MethodHandles.collectArguments(handle, 0, argHandle)
-    }
-
-    return handle
+    class NotValidated : ValidationState()
 }
 
-fun compile(node: ASTNode) : Rune {
+data class TypeError(val node: ASTNode<*>, val actual: Multiset<Type<*>>?) : Throwable()
+
+data class ASTNode<T : ValidationState>(val rune: Rune, val args: List<ASTNode<T>>) {
+
+
+    /**
+     * checks types and reorders arguments
+     */
+    fun validate(): ASTNode<ValidationState.Validated> {
+        val validated = this.args.map { it.validate() }
+
+        val expectedArgTypes = this.rune.arguments
+        val actualArgTypes = validated.mapTo(HashMultiset.create()) { it.rune.returnType }
+
+        if (ImmutableMultiset.of(expectedArgTypes) != actualArgTypes) {
+            throw TypeError(this, actualArgTypes)
+        }
+
+        return ASTNode(this.rune, reorderArgs(validated, expectedArgTypes))
+    }
+
+}
+
+fun <T : ValidationState> reorderArgs(listToReorder: List<ASTNode<T>>, referenceList: List<Type<*>>) : List<ASTNode<T>> {
+    val indexMap: MutableMap<Type<*>, Int> = HashMap()
+    referenceList.indices.forEach { i ->
+        indexMap[referenceList[i]] = i
+    }
+
+    return listToReorder.sortedWith(Comparator.comparingInt { node: ASTNode<*> -> indexMap[node.rune.returnType]!! })
+}
+
+fun compile(node: ASTNode<ValidationState.Validated>): Rune {
     val handle = compileToHandle(node)
 
 
@@ -33,20 +60,19 @@ fun compile(node: ASTNode) : Rune {
     }
 }
 
-data class TypeError(val node: ASTNode, val expected: Type<*>, val actual: Type<*>?) : Throwable()
+fun compileToHandle(node: ASTNode<ValidationState.Validated>): MethodHandle {
+    var handle = node.rune.handle
 
-fun typeCheck(node: ASTNode) : Type<*> {
-    val expectedArgTypes = node.rune.arguments
-    val argTypes = node.args.map { typeCheck(it) }
+    for (argNode in node.args) {
+        val argHandle = compileToHandle(argNode)
 
-    expectedArgTypes.forEachIndexed { i, expected ->
-        val actual = argTypes.getOrNull(i)
-
-        if (expected != actual) {
-            throw TypeError(node, expected, actual)
-        }
+        handle = MethodHandles.collectArguments(handle, 0, argHandle)
     }
 
-    return node.rune.returnType
+    return handle
 }
+
+
+
+
 

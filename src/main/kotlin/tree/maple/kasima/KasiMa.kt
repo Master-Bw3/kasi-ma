@@ -5,10 +5,8 @@ import net.minecraft.util.Identifier
 import org.slf4j.LoggerFactory
 import tree.maple.kasima.blocks.KasimaBlockRegistry
 import tree.maple.kasima.spellEngine.ASTNode
-import tree.maple.kasima.spellEngine.compile
 import tree.maple.kasima.spellEngine.runes.RuneAdd
 import tree.maple.kasima.spellEngine.runes.RuneOne
-import tree.maple.kasima.spellEngine.typeCheck
 import tree.maple.kasima.spellEngine.types.TypeRegistry
 
 object KasiMa : ModInitializer {
@@ -39,7 +37,7 @@ object KasiMa : ModInitializer {
             ))
         ))
 
-        println(typeCheck(ast))
+        println(ast.validate())
 
 
 
