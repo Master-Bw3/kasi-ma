@@ -29,7 +29,7 @@ data class ASTNode<T : ValidationState>(val rune: Rune, val args: List<ASTNode<T
         val expectedArgTypes = this.rune.arguments
         val actualArgTypes = validated.mapTo(HashMultiset.create()) { it.rune.returnType }
 
-        if (ImmutableMultiset.of(expectedArgTypes) != actualArgTypes) {
+        if (ImmutableMultiset.copyOf(expectedArgTypes) != actualArgTypes) {
             throw TypeError(this, actualArgTypes)
         }
 

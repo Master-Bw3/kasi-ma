@@ -44,6 +44,8 @@ object TypeRegistry {
 
 
     val NUMBER: Type<NumberValue> = register(NumberValue.TYPE, "number")
+    val BOOLEAN: Type<BooleanValue> = register(BooleanValue.TYPE, "boolean")
+
 
     private fun <T : Value> register(type: Type<T>, name: String): Type<T> {
         return Registry.register(
