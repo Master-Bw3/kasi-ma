@@ -8,10 +8,7 @@ import tree.maple.kasima.blocks.blockEntities.KasimaBlockEntityTypeRegistry
 import tree.maple.kasima.spellEngine.ASTNode
 import tree.maple.kasima.spellEngine.TypeError
 import tree.maple.kasima.spellEngine.compile
-import tree.maple.kasima.spellEngine.runes.RuneAdd
-import tree.maple.kasima.spellEngine.runes.RuneAddBool
-import tree.maple.kasima.spellEngine.runes.RuneOne
-import tree.maple.kasima.spellEngine.runes.RuneTrue
+import tree.maple.kasima.spellEngine.runes.*
 import tree.maple.kasima.spellEngine.types.TypeRegistry
 
 object KasiMa : ModInitializer {
@@ -31,6 +28,7 @@ object KasiMa : ModInitializer {
         KasimaBlockRegistry.initialize()
         KasimaBlockEntityTypeRegistry.initialize()
         TypeRegistry.initialize()
+        RuneRegistry.initialize()
 
 
 

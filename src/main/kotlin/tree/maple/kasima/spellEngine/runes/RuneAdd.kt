@@ -9,7 +9,7 @@ import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
 import kotlin.reflect.KClass
 
-object RuneAdd : Rune() {
+object RuneAdd : Rune(1u) {
     override val arguments: List<Type<*>> = listOf(NumberValue.TYPE, NumberValue.TYPE)
 
     override val returnType: Type<*>

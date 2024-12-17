@@ -4,7 +4,7 @@ import tree.maple.kasima.spellEngine.types.BooleanValue
 import tree.maple.kasima.spellEngine.types.NumberValue
 import tree.maple.kasima.spellEngine.types.Type
 
-object RuneAddBool : Rune() {
+object RuneAddBool : Rune(4u) {
     override val arguments: List<Type<*>>
         get() = listOf(BooleanValue.TYPE, NumberValue.TYPE)
 

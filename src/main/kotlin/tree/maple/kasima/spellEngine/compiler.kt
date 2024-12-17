@@ -51,7 +51,7 @@ fun compile(node: ASTNode<ValidationState.Validated>): Rune {
     val handle = compileToHandle(node)
 
 
-    return object : Rune() {
+    return object : Rune(0U) {
         override val arguments: List<Type<*>> = handle.type().parameterList().map { Type.fromRawType(it.kotlin) }
 
         override val returnType: Type<*> = Type.fromRawType(handle.type().returnType().kotlin)

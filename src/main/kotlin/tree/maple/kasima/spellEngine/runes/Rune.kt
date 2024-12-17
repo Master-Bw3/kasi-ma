@@ -5,7 +5,7 @@ import java.lang.invoke.MethodHandle
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
 
-abstract class Rune {
+abstract class Rune(val blockStateID: UInt) {
 
     abstract val arguments : List<Type<*>>
 
