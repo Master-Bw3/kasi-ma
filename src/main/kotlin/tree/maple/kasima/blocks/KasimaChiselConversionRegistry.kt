@@ -30,4 +30,7 @@ object KasimaChiselConversionRegistry {
 
         return from
     }
+
+    fun initialize() {}
+
 }

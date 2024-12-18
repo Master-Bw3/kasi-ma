@@ -4,6 +4,7 @@ import net.fabricmc.api.ModInitializer
 import net.minecraft.util.Identifier
 import org.slf4j.LoggerFactory
 import tree.maple.kasima.blocks.KasimaBlockRegistry
+import tree.maple.kasima.blocks.KasimaChiselConversionRegistry
 import tree.maple.kasima.blocks.blockEntities.KasimaBlockEntityTypeRegistry
 import tree.maple.kasima.items.KasimaItemRegistry
 import tree.maple.kasima.spellEngine.ASTNode
@@ -31,6 +32,7 @@ object KasiMa : ModInitializer {
         KasimaBlockEntityTypeRegistry.initialize()
         TypeRegistry.initialize()
         RuneRegistry.initialize()
+        KasimaChiselConversionRegistry.initialize()
 
 
 
