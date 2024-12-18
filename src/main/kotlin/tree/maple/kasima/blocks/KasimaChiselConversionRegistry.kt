@@ -23,12 +23,12 @@ object KasimaChiselConversionRegistry {
     ).buildAndRegister()
 
 
-    fun register(from: Block, to: Block): Block {
+    fun <T: Block> register(from: Block, to: T): T {
         val fromID = Registries.BLOCK.getId(from)
 
         Registry.register(REGISTRY, fromID, to)
 
-        return from
+        return to
     }
 
     fun initialize() {}
