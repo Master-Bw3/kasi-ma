@@ -18,7 +18,7 @@ class Chisel(settings: Settings?) : Item(settings) {
         val convertsTo = KasimaChiselConversionRegistry.REGISTRY.get(blockID)
 
         if (convertsTo != null) {
-            context.world.setBlockState(context.blockPos, convertsTo.getStateWithProperties(blockState) )
+            context.world.setBlockState(context.blockPos, convertsTo.getStateWithProperties(blockState))
 
             return ActionResult.SUCCESS
 

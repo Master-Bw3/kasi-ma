@@ -16,6 +16,7 @@ import net.minecraft.world.WorldView
 import net.minecraft.world.tick.ScheduledTickView
 import tree.maple.kasima.blocks.KasimaBlockRegistry.PALE_RUNE_LOG
 import tree.maple.kasima.blocks.RuneLog.Companion.RUNE
+import tree.maple.kasima.items.KasimaItemRegistry
 import tree.maple.kasima.spellEngine.ASTNode
 import tree.maple.kasima.spellEngine.ValidationState
 import tree.maple.kasima.spellEngine.compile
@@ -50,6 +51,10 @@ class RuneCore(settings: Settings) : Block(settings) {
         player: PlayerEntity,
         hit: BlockHitResult
     ): ActionResult {
+        if (player.isHolding(KasimaItemRegistry.CHISEL)) {
+            return ActionResult.PASS
+        }
+
         if (!world.isClient) {
             runProgram(world, pos)
         }
