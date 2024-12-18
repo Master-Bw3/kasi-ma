@@ -23,10 +23,9 @@ object KasimaChiselConversionRegistry {
     ).buildAndRegister()
 
 
-    fun <T: Block> register(from: Block, to: T): T {
-        val fromID = Registries.BLOCK.getId(from)
+    fun <T: Block> register(from: Identifier, to: T): T {
 
-        Registry.register(REGISTRY, fromID, to)
+        Registry.register(REGISTRY, from, to)
 
         return to
     }

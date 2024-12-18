@@ -30,7 +30,7 @@ object KasimaBlockRegistry {
         ), "pale_rune_log",
         registerItem = false,
         flammable = true
-    ).let { KasimaChiselConversionRegistry.register(Blocks.PALE_OAK_LOG, it) }
+    ).let { KasimaChiselConversionRegistry.register(Identifier.ofVanilla("pale_oak_log"), it) }
 
     val PALE_RUNE_CORE = register(
         ::RuneCore,
@@ -40,8 +40,8 @@ object KasimaBlockRegistry {
             .strength(10.0f).sounds(BlockSoundGroup.CREAKING_HEART),
         "pale_rune_core",
         registerItem = false,
-        flammable = true
-    ).let { KasimaChiselConversionRegistry.register(Blocks.CREAKING_HEART, it) }
+        flammable = false
+    ).let { KasimaChiselConversionRegistry.register(Identifier.ofVanilla("creaking_heart"), it) }
 
     private fun <T : Block> register(
         constructor: (AbstractBlock.Settings) -> T,
