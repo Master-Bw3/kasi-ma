@@ -4,6 +4,7 @@ import net.minecraft.block.AbstractBlock
 import net.minecraft.block.Block
 import net.minecraft.block.Blocks
 import net.minecraft.block.MapColor
+import net.minecraft.block.enums.NoteBlockInstrument
 import net.minecraft.item.BlockItem
 import net.minecraft.item.Item
 import net.minecraft.registry.Registries
@@ -17,20 +18,23 @@ import tree.maple.kasima.KasiMa
 
 object KasimaBlockRegistry {
 
-    val OAK_RUNE_LOG = register(
-        ::RuneLog, Blocks.createLogSettings(
-            MapColor.OAK_TAN,
-            MapColor.SPRUCE_BROWN,
+    val PALE_RUNE_LOG = register(
+        ::RuneLog,
+        Blocks.createLogSettings(
+            Blocks.PALE_OAK_PLANKS.defaultMapColor,
+            Blocks.PALE_OAK_WOOD.defaultMapColor,
             BlockSoundGroup.WOOD
-        ), "oak_rune_log", false
+        ), "pale_rune_log", false
     )
 
-    val OAK_RUNE_CORE = register(
-        ::RuneCore, Blocks.createLogSettings(
-            MapColor.OAK_TAN,
-            MapColor.SPRUCE_BROWN,
-            BlockSoundGroup.WOOD
-        ), "oak_rune_core", false
+    val PALE_RUNE_CORE = register(
+        ::RuneCore,
+        AbstractBlock.Settings.create()
+            .mapColor(MapColor.ORANGE)
+            .instrument(NoteBlockInstrument.BASEDRUM)
+            .strength(10.0f).
+            sounds(BlockSoundGroup.CREAKING_HEART),
+        "pale_rune_core", false
     )
 
     private fun <T : Block> register(

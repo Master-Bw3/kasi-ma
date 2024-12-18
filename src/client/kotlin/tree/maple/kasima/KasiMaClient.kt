@@ -11,8 +11,8 @@ object KasiMaClient : ClientModInitializer {
 
         BlockRenderLayerMap.INSTANCE.putBlocks(
             RenderLayer.getTranslucent(),
-            KasimaBlockRegistry.OAK_RUNE_LOG,
-            KasimaBlockRegistry.OAK_RUNE_CORE
+            KasimaBlockRegistry.PALE_RUNE_LOG,
+            KasimaBlockRegistry.PALE_RUNE_CORE
         )
     }
 }

@@ -1,0 +1,124 @@
+{
+  "multipart": [
+    {
+      "apply": {
+        "model": "minecraft:block/creaking_heart_horizontal",
+        "x": 90,
+        "y": 90
+      },
+      "when": {
+        "AND": [
+          {
+            "axis": "x"
+          },
+          {
+            "powered": false
+          }
+        ]
+      }
+    },
+    {
+      "apply": {
+        "model": "minecraft:block/creaking_heart"
+      },
+      "when": {
+        "AND": [
+          {
+            "axis": "y"
+          },
+          {
+            "powered": false
+          }
+        ]
+      }
+    },
+    {
+      "apply": {
+        "model": "minecraft:block/creaking_heart_horizontal",
+        "x": 90
+      },
+      "when": {
+        "AND": [
+          {
+            "axis": "z"
+          },
+          {
+            "powered": false
+          }
+        ]
+      }
+    },
+    {
+      "apply": {
+        "model": "minecraft:block/creaking_heart_active_horizontal",
+        "x": 90,
+        "y": 90
+      },
+      "when": {
+        "AND": [
+          {
+            "axis": "x"
+          },
+          {
+            "powered": true
+          }
+        ]
+      }
+    },
+    {
+      "apply": {
+        "model": "minecraft:block/creaking_heart_active"
+      },
+      "when": {
+        "AND": [
+          {
+            "axis": "y"
+          },
+          {
+            "powered": true
+          }
+        ]
+      }
+    },
+    {
+      "apply": {
+        "model": "minecraft:block/creaking_heart_active_horizontal",
+        "x": 90
+      },
+      "when": {
+        "AND": [
+          {
+            "axis": "z"
+          },
+          {
+            "powered": true
+          }
+        ]
+      }
+    },
+    {
+      "apply": {
+        "model": "kasi-ma:block/rune_1"
+      },
+      "when": {
+        "rune": "1"
+      }
+    },
+    {
+      "apply": {
+        "model": "kasi-ma:block/rune_2"
+      },
+      "when": {
+        "rune": "2"
+      }
+    },
+    {
+      "apply": {
+        "model": "kasi-ma:block/rune_3"
+      },
+      "when": {
+        "rune": "3"
+      }
+    }
+  ]
+}
