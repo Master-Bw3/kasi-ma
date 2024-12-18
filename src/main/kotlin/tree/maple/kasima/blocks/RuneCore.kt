@@ -16,14 +16,13 @@ import net.minecraft.world.WorldView
 import net.minecraft.world.tick.ScheduledTickView
 import tree.maple.kasima.blocks.KasimaBlockRegistry.PALE_RUNE_LOG
 import tree.maple.kasima.blocks.RuneLog.Companion.RUNE
-import tree.maple.kasima.blocks.blockEntities.RuneCoreBlockEntity
 import tree.maple.kasima.spellEngine.ASTNode
 import tree.maple.kasima.spellEngine.ValidationState
 import tree.maple.kasima.spellEngine.compile
 import tree.maple.kasima.spellEngine.runes.RuneRegistry
 
 
-class RuneCore(settings: Settings) : BlockWithEntity(settings.nonOpaque()) {
+class RuneCore(settings: Settings) : Block(settings) {
 
     init {
         defaultState = defaultState
@@ -41,8 +40,6 @@ class RuneCore(settings: Settings) : BlockWithEntity(settings.nonOpaque()) {
     override fun getCodec(): MapCodec<RuneCore>? {
         return createCodec(::RuneCore)
     }
-
-    override fun createBlockEntity(pos: BlockPos, state: BlockState) = RuneCoreBlockEntity(pos, state)
 
     override fun getRenderType(state: BlockState) = BlockRenderType.MODEL
 

@@ -14,11 +14,6 @@ object KasimaBlockEntityTypeRegistry {
         return Registry.register(Registries.BLOCK_ENTITY_TYPE, KasiMa.id(path), blockEntityType)
     }
 
-    val PALE_RUNE_CORE: BlockEntityType<RuneCoreBlockEntity> = register(
-        "pale_rune_core",
-        FabricBlockEntityTypeBuilder.create(::RuneCoreBlockEntity, KasimaBlockRegistry.PALE_RUNE_CORE).build()
-    )
-
     fun initialize() {
     }
 }

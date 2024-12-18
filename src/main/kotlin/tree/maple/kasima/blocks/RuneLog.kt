@@ -8,7 +8,7 @@ import net.minecraft.state.property.IntProperty
 import javax.swing.event.HyperlinkEvent.EventType.ACTIVATED
 
 
-class RuneLog(settings: Settings) : PillarBlock(settings.nonOpaque()) {
+class RuneLog(settings: Settings) : PillarBlock(settings) {
 
     init {
         defaultState = defaultState.with(RUNE, 0)

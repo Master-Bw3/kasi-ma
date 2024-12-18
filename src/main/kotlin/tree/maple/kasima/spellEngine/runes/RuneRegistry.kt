@@ -54,7 +54,7 @@ object RuneRegistry {
     }
 
     fun getFromBlockStateID(intId: Int): Rune? {
-        val id: Identifier =BLOCK_STATE_ID_LOOKUP.get(intId)
+        val id: Identifier = BLOCK_STATE_ID_LOOKUP.get(intId)
             ?: throw IllegalArgumentException("Not a valid int id for fragment type")
 
         return REGISTRY.get(id)

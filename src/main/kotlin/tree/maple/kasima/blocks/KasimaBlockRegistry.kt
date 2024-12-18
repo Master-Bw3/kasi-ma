@@ -1,5 +1,6 @@
 package tree.maple.kasima.blocks
 
+import net.fabricmc.fabric.api.registry.FlammableBlockRegistry
 import net.minecraft.block.AbstractBlock
 import net.minecraft.block.Block
 import net.minecraft.block.Blocks
@@ -18,30 +19,36 @@ import tree.maple.kasima.KasiMa
 
 object KasimaBlockRegistry {
 
+    val flammableBlockRegistry: FlammableBlockRegistry = FlammableBlockRegistry.getDefaultInstance()
+
     val PALE_RUNE_LOG = register(
         ::RuneLog,
         Blocks.createLogSettings(
             Blocks.PALE_OAK_PLANKS.defaultMapColor,
             Blocks.PALE_OAK_WOOD.defaultMapColor,
             BlockSoundGroup.WOOD
-        ), "pale_rune_log", false
-    )
+        ), "pale_rune_log",
+        registerItem = false,
+        flammable = true
+    ).let { KasimaChiselConversionRegistry.register(Blocks.PALE_OAK_LOG, it) }
 
     val PALE_RUNE_CORE = register(
         ::RuneCore,
         AbstractBlock.Settings.create()
             .mapColor(MapColor.ORANGE)
             .instrument(NoteBlockInstrument.BASEDRUM)
-            .strength(10.0f).
-            sounds(BlockSoundGroup.CREAKING_HEART),
-        "pale_rune_core", false
-    )
+            .strength(10.0f).sounds(BlockSoundGroup.CREAKING_HEART),
+        "pale_rune_core",
+        registerItem = false,
+        flammable = true
+    ).let { KasimaChiselConversionRegistry.register(Blocks.CREAKING_HEART, it) }
 
     private fun <T : Block> register(
         constructor: (AbstractBlock.Settings) -> T,
         settings: AbstractBlock.Settings,
         name: String,
-        registerItem: Boolean
+        registerItem: Boolean,
+        flammable: Boolean
     ): T {
         // Register the block and its item.
         val id: Identifier = Identifier.of(KasiMa.id, name)
@@ -60,7 +67,13 @@ object KasimaBlockRegistry {
             Registry.register(Registries.ITEM, itemKey, blockItem)
         }
 
-        return Registry.register(Registries.BLOCK, blockKey, block)
+        val registered = Registry.register(Registries.BLOCK, blockKey, block)
+
+        if (flammable) {
+            flammableBlockRegistry.add(registered, 5, 5)
+        }
+
+        return registered
     }
 
     fun initialize() {}
