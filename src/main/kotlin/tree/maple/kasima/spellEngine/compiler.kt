@@ -3,6 +3,7 @@ package tree.maple.kasima.spellEngine
 import net.minecraft.util.Identifier
 import tree.maple.kasima.api.registry.RuneRegistry
 import tree.maple.kasima.spellEngine.types.SpellFunction
+import tree.maple.kasima.spellEngine.types.SpellFunctionType
 import tree.maple.kasima.spellEngine.types.Type
 import java.lang.invoke.MethodHandle
 import java.lang.invoke.MethodHandles
@@ -10,9 +11,9 @@ import java.lang.invoke.MethodType
 
 
 sealed class ValidationState {
-    class Validated : ValidationState()
+    data object Validated : ValidationState()
 
-    class NotValidated : ValidationState()
+    data object NotValidated : ValidationState()
 }
 
 data class TypeError(val node: ASTNode<*>, val actual: List<Type<*>?>) : Throwable()
@@ -22,6 +23,8 @@ sealed class ASTNode<T : ValidationState> {
     class Operator<T : ValidationState>(val operator: Identifier, val args: List<ASTNode<T>>) : ASTNode<T>()
 
     class Capture<T : ValidationState>(val operator: Identifier, val args: List<ASTNode<T>?>) : ASTNode<T>()
+
+    class Apply<T : ValidationState>(val to: ASTNode<T>, val args: List<ASTNode<T>>) : ASTNode<T>()
 
 
     /**
@@ -60,11 +63,31 @@ sealed class ASTNode<T : ValidationState> {
 
                 Operator(this.operator, validated)
             }
+
+            is Apply<*> -> {
+                val validatedTarget = this.to.validate()
+                val targetType = getReturnType(validatedTarget)
+                if (targetType is SpellFunctionType) {
+                    val validated = this.args.map { it.validate() }
+
+                    val expectedArgTypes = targetType.arguments
+                    val actualArgTypes = validated.map { getReturnType(it) }
+
+                    if (expectedArgTypes != actualArgTypes) {
+                        throw TypeError(this, actualArgTypes)
+                    }
+
+                    return Apply(validatedTarget, validated)
+                } else {
+                    //TODO: fix error
+                    throw TypeError(this, listOf())
+                }
+            }
         }
     }
 }
 
-fun getReturnType(node: ASTNode<*>): Type<*> {
+fun getReturnType(node: ASTNode<ValidationState.Validated>): Type<*> {
     return when (node) {
         is ASTNode.Capture<*> -> object : SpellFunction() {
             val function = (RuneRegistry.get(node.operator)!!.rune as Rune.Function).function
@@ -74,9 +97,11 @@ fun getReturnType(node: ASTNode<*>): Type<*> {
 
             override val returnType: Type<*>
                 get() = function.returnType
-        }.TYPE
+        }.type
 
         is ASTNode.Operator<*> -> (RuneRegistry.get(node.operator)!!.rune as Rune.Function).function.returnType
+
+        is ASTNode.Apply<ValidationState.Validated> -> getReturnType(node.to)
     }
 }
 
@@ -85,9 +110,9 @@ fun compile(node: ASTNode<ValidationState.Validated>): SpellFunction {
 
 
     return object : SpellFunction() {
-        override val arguments: List<Type<*>> = handle.type().parameterList().map { Type.fromRawType(it.kotlin) }
+        override val arguments: List<Type<*>> = listOf()
 
-        override val returnType: Type<*> = Type.fromRawType(handle.type().returnType().kotlin)
+        override val returnType: Type<*> = getReturnType(node)
 
         override val handle: MethodHandle = handle
     }
@@ -138,6 +163,19 @@ fun compileToHandle(node: ASTNode<ValidationState.Validated>): MethodHandle {
 
             handle
         }
+
+        is ASTNode.Apply<ValidationState.Validated> -> {
+            var handle = compileToHandle(node.to)
+
+            for (argNode in node.args) {
+                val argHandle = compileToHandle(argNode)
+
+                handle = MethodHandles.collectArguments(handle, 0, argHandle)
+            }
+
+            handle
+        }
+
     }
 }
 

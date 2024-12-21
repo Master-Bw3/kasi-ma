@@ -5,11 +5,17 @@ import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
 import kotlin.reflect.KClass
 
+abstract class SpellFunctionType : Type<SpellFunction>() {
+    abstract val arguments: List<Type<*>>
+
+    abstract val returnType: Type<*>
+}
+
 abstract class SpellFunction : Value() {
 
-    abstract val arguments : List<Type<*>>
+    abstract val arguments: List<Type<*>>
 
-    abstract val returnType : Type<*>
+    abstract val returnType: Type<*>
 
     open val handle: MethodHandle by lazy {
         val lookup = MethodHandles.lookup()
@@ -17,10 +23,17 @@ abstract class SpellFunction : Value() {
         lookup.findStatic(this::class.java, "apply", methodType)
     }
 
-    val TYPE = object : Type<SpellFunction>() {
-        override fun of(value: Any): SpellFunction  {
-            if (value == this) {
-                return value as SpellFunction
+
+    override val type: Type<*> = object : SpellFunctionType() {
+        override val arguments: List<Type<*>>
+            get() = this@SpellFunction.arguments
+
+        override val returnType: Type<*>
+            get() = this@SpellFunction.returnType
+
+        override fun of(value: Any): SpellFunction {
+            if (value is SpellFunction && value == this) {
+                return value
             } else {
                 throw IllegalArgumentException()
             }
@@ -30,13 +43,11 @@ abstract class SpellFunction : Value() {
             get() = SpellFunction::class
 
         override fun equals(other: Any?): Boolean {
-            return other is SpellFunction &&
-                    arguments == other.arguments &&
-                    returnType == other.returnType
+            return other is SpellFunction && arguments == other.arguments && returnType == other.returnType
         }
     }
 
     override fun toString(): String {
-        return "Function(${this})"
+        return "(${arguments.joinToString(", ")}) -> ${returnType})"
     }
 }

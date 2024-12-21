@@ -7,4 +7,6 @@ sealed class Rune {
     data class Function(val function: SpellFunction) : Rune()
 
     data object Gap : Rune()
+
+    data object Apply : Rune()
 }

@@ -125,20 +125,31 @@ class RuneCore(settings: Settings) : Block(settings), AxeMineable {
         val runeEntry = RuneRegistry.first { it.block.get() == blockState.block }
         val axis = blockState.get(Properties.AXIS)
 
+        val direction = if (prevDirection.axis == axis) {
+            prevDirection
+        } else {
+            axis.directions.firstOrNull { direction ->
+                val offsetPos = pos.add(direction.vector)
+                RuneRegistry.any { it.block == world.getBlockState(offsetPos).block }
+            } ?: axis.positiveDirection
+        }
 
         return when (runeEntry.rune) {
+
             Rune.Gap -> TODO()
 
-            is Rune.Function -> {
-                val direction = if (prevDirection.axis == axis) {
-                    prevDirection
-                } else {
-                    axis.directions.firstOrNull { direction ->
-                        val offsetPos = pos.add(direction.vector)
-                        RuneRegistry.any { it.block == world.getBlockState(offsetPos).block }
-                    } ?: axis.positiveDirection
-                }
+            Rune.Apply -> {
+                val targetPos = pos.add(direction.vector)
+                visited.add(targetPos)
+                val target = constructASTFromPhysicalTree(world, visited, targetPos, direction)
 
+
+
+                TODO()
+
+            }
+
+            is Rune.Function -> {
                 val candidates = direction?.let {
                     runeEntry.rune.function.arguments.indices.map { i ->
                         pos.add(direction.vector.multiply(i + 1))
@@ -168,7 +179,7 @@ class RuneCore(settings: Settings) : Block(settings), AxeMineable {
                             when (rune) {
                                 Rune.Gap -> null
 
-                                is Rune.Function -> constructASTFromPhysicalTree(
+                                else -> constructASTFromPhysicalTree(
                                     world,
                                     visited,
                                     blockPos,
@@ -190,6 +201,7 @@ class RuneCore(settings: Settings) : Block(settings), AxeMineable {
                         })
                 }
             }
+
         }
     }
 }

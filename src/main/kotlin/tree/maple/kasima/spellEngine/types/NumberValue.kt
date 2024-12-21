@@ -7,6 +7,8 @@ class NumberValue : Value {
     var value: Double = 0.0
         private set
 
+    override val type: Type<*> = TYPE
+
     constructor(value: Double) {
         this.value = value
     }

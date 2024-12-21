@@ -4,12 +4,12 @@ import net.fabricmc.api.ModInitializer
 import net.minecraft.util.Identifier
 import org.slf4j.LoggerFactory
 import tree.maple.kasima.api.registry.RuneRegistry
-import tree.maple.kasima.api.registry.TypeRegistry
+import tree.maple.kasima.api.registry.ValueEndecRegistry
 import tree.maple.kasima.blocks.KasimaBlocks
 import tree.maple.kasima.blocks.blockEntities.KasimaBlockEntities
 import tree.maple.kasima.items.KasimaItems
 import tree.maple.kasima.spellEngine.KasimaRunes
-import tree.maple.kasima.spellEngine.types.KasimaTypes
+import tree.maple.kasima.spellEngine.types.KasimaValueEndecs
 
 
 object KasiMa : ModInitializer {
@@ -26,13 +26,13 @@ object KasiMa : ModInitializer {
         // Proceed with mild caution.
         logger.info("Hello Fabric world!")
 
-        TypeRegistry.initialize()
+        ValueEndecRegistry.initialize()
         RuneRegistry.initialize()
 
         KasimaItems.initialize()
         KasimaBlocks.initialize()
         KasimaRunes.initialize()
         KasimaBlockEntities.initialize()
-        KasimaTypes.initialize()
+        KasimaValueEndecs.initialize()
     }
 }

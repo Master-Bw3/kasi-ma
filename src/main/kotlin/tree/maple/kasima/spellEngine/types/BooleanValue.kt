@@ -4,6 +4,8 @@ import kotlin.reflect.KClass
 
 class BooleanValue(val value: Boolean) : Value() {
 
+    override val type: Type<*> = TYPE
+
     companion object {
         val TYPE = object : Type<BooleanValue>() {
             override fun of(value: Any): BooleanValue  {
@@ -19,6 +21,7 @@ class BooleanValue(val value: Boolean) : Value() {
 
         }
     }
+
 
     override fun toString(): String {
         return "Boolean(${value})"
