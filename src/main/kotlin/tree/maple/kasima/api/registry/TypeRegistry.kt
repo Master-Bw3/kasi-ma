@@ -1,7 +1,6 @@
-package tree.maple.kasima.spellEngine.types
+package tree.maple.kasima.api.registry
 
 import com.mojang.serialization.Lifecycle
-import io.wispforest.endec.StructEndec
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import net.fabricmc.fabric.api.event.registry.FabricRegistryBuilder
@@ -12,12 +11,16 @@ import net.minecraft.registry.entry.RegistryEntry
 import net.minecraft.registry.entry.RegistryEntryInfo
 import net.minecraft.util.Identifier
 import tree.maple.kasima.KasiMa
-import java.util.*
+import tree.maple.kasima.spellEngine.types.BooleanValue
+import tree.maple.kasima.spellEngine.types.NumberValue
+import tree.maple.kasima.spellEngine.types.Type
+import tree.maple.kasima.spellEngine.types.Value
 
 object TypeRegistry {
 
     val REGISTRY_KEY: RegistryKey<Registry<Type<*>>> =
         RegistryKey.ofRegistry(KasiMa.id("type"))
+
     val INT_ID_LOOKUP: Int2ObjectMap<Identifier> = Int2ObjectOpenHashMap()
     val REGISTRY: Registry<Type<*>> = FabricRegistryBuilder.from(object :
         SimpleRegistry<Type<*>>(
@@ -43,14 +46,11 @@ object TypeRegistry {
     }).buildAndRegister()
 
 
-    val NUMBER: Type<NumberValue> = register(NumberValue.TYPE, "number")
-    val BOOLEAN: Type<BooleanValue> = register(BooleanValue.TYPE, "boolean")
 
-
-    private fun <T : Value> register(type: Type<T>, name: String): Type<T> {
+    fun <T : Value> register(type: Type<T>, id: Identifier): Type<T> {
         return Registry.register(
             REGISTRY,
-            KasiMa.id(name),
+            id,
             type
         )
     }

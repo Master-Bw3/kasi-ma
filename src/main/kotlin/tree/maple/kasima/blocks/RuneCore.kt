@@ -3,10 +3,12 @@ package tree.maple.kasima.blocks
 import com.mojang.serialization.MapCodec
 import net.minecraft.block.*
 import net.minecraft.entity.player.PlayerEntity
+import net.minecraft.registry.Registries
 import net.minecraft.state.StateManager
 import net.minecraft.state.property.Properties
 import net.minecraft.text.Text
 import net.minecraft.util.ActionResult
+import net.minecraft.util.Identifier
 import net.minecraft.util.hit.BlockHitResult
 import net.minecraft.util.math.BlockPos
 import net.minecraft.util.math.Direction
@@ -14,16 +16,15 @@ import net.minecraft.util.math.random.Random
 import net.minecraft.world.World
 import net.minecraft.world.WorldView
 import net.minecraft.world.tick.ScheduledTickView
-import tree.maple.kasima.blocks.KasimaBlockRegistry.PALE_RUNE_LOG
 import tree.maple.kasima.blocks.RuneLog.Companion.RUNE
-import tree.maple.kasima.items.KasimaItemRegistry
+import tree.maple.kasima.items.KasimaItems
 import tree.maple.kasima.spellEngine.ASTNode
 import tree.maple.kasima.spellEngine.ValidationState
 import tree.maple.kasima.spellEngine.compile
-import tree.maple.kasima.spellEngine.runes.RuneRegistry
+import tree.maple.kasima.api.registry.RuneRegistry
 
 
-class RuneCore(settings: Settings) : Block(settings) {
+class RuneCore(settings: Settings) : Block(settings), AxeMineable {
 
     init {
         defaultState = defaultState
@@ -51,7 +52,7 @@ class RuneCore(settings: Settings) : Block(settings) {
         player: PlayerEntity,
         hit: BlockHitResult
     ): ActionResult {
-        if (player.isHolding(KasimaItemRegistry.CHISEL)) {
+        if (player.isHolding(KasimaItems.CHISEL)) {
             return ActionResult.PASS
         }
 
@@ -93,7 +94,7 @@ class RuneCore(settings: Settings) : Block(settings) {
 
         val startDirection: Direction? = axis.directions.firstOrNull { direction ->
             val pos = corePos.add(direction.vector)
-            world.getBlockState(pos).isOf(PALE_RUNE_LOG)
+            RuneRegistry.any { it.block.get() == world.getBlockState(pos).block  }
         }
 
 
@@ -119,8 +120,9 @@ class RuneCore(settings: Settings) : Block(settings) {
         pos: BlockPos,
         prevDirection: Direction,
     ): ASTNode<ValidationState.NotValidated> {
-        val rune = RuneRegistry.getFromBlockStateID(world.getBlockState(pos).get(RUNE) ?: 0)!!
-        val axis = world.getBlockState(pos).get(Properties.AXIS)
+        val blockState = world.getBlockState(pos)
+        val rune = RuneRegistry.first { it.block.get() == blockState.block }.rune
+        val axis = blockState.get(Properties.AXIS)
 
 
         val direction = if (prevDirection.axis == axis) {
@@ -128,7 +130,7 @@ class RuneCore(settings: Settings) : Block(settings) {
         } else {
             axis.directions.firstOrNull { direction ->
                 val offsetPos = pos.add(direction.vector)
-                world.getBlockState(offsetPos).isOf(PALE_RUNE_LOG)
+                RuneRegistry.any { it.block == world.getBlockState(offsetPos).block }
             } ?: axis.positiveDirection
         }
 
@@ -140,7 +142,7 @@ class RuneCore(settings: Settings) : Block(settings) {
         if (candidates.any { visited.contains(it) }) throw Exception()
         visited.addAll(candidates)
 
-        return ASTNode(
+        return ASTNode.Rune(
             rune,
             candidates.map { blockPos ->
                 constructASTFromPhysicalTree(

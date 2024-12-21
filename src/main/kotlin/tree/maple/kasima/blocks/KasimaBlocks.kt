@@ -3,7 +3,6 @@ package tree.maple.kasima.blocks
 import net.fabricmc.fabric.api.registry.FlammableBlockRegistry
 import net.minecraft.block.AbstractBlock
 import net.minecraft.block.Block
-import net.minecraft.block.Blocks
 import net.minecraft.block.MapColor
 import net.minecraft.block.enums.NoteBlockInstrument
 import net.minecraft.item.BlockItem
@@ -17,20 +16,9 @@ import net.minecraft.util.Identifier
 import tree.maple.kasima.KasiMa
 
 
-object KasimaBlockRegistry {
+object KasimaBlocks {
 
     val flammableBlockRegistry: FlammableBlockRegistry = FlammableBlockRegistry.getDefaultInstance()
-
-    val PALE_RUNE_LOG = register(
-        ::RuneLog,
-        Blocks.createLogSettings(
-            Blocks.PALE_OAK_PLANKS.defaultMapColor,
-            Blocks.PALE_OAK_WOOD.defaultMapColor,
-            BlockSoundGroup.WOOD
-        ), "pale_rune_log",
-        registerItem = false,
-        flammable = true
-    ).let { KasimaChiselConversionRegistry.register(Identifier.ofVanilla("pale_oak_log"), it) }
 
     val PALE_RUNE_CORE = register(
         ::RuneCore,
@@ -41,7 +29,7 @@ object KasimaBlockRegistry {
         "pale_rune_core",
         registerItem = false,
         flammable = false
-    ).let { KasimaChiselConversionRegistry.register(Identifier.ofVanilla("creaking_heart"), it) }
+    )
 
     private fun <T : Block> register(
         constructor: (AbstractBlock.Settings) -> T,
@@ -49,9 +37,16 @@ object KasimaBlockRegistry {
         name: String,
         registerItem: Boolean,
         flammable: Boolean
+    ): T = register(constructor, settings, KasiMa.id(name), registerItem, flammable)
+
+    fun <T : Block> register(
+        constructor: (AbstractBlock.Settings) -> T,
+        settings: AbstractBlock.Settings,
+        id: Identifier,
+        registerItem: Boolean,
+        flammable: Boolean
     ): T {
         // Register the block and its item.
-        val id: Identifier = Identifier.of(KasiMa.id, name)
         val blockKey = RegistryKey.of(RegistryKeys.BLOCK, id)
         val block = constructor.invoke(settings.registryKey(blockKey))
 

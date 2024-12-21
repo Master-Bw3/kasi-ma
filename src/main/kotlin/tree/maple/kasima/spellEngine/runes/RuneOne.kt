@@ -6,7 +6,7 @@ import java.lang.invoke.MethodHandle
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
 
-object RuneOne : Rune(2u) {
+object RuneOne : Rune() {
     override val arguments: List<Type<*>> = listOf()
 
     override val returnType: Type<*>

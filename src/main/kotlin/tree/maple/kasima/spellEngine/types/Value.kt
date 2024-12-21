@@ -1,5 +1,7 @@
 package tree.maple.kasima.spellEngine.types
 
+import tree.maple.kasima.api.registry.TypeRegistry
+
 abstract class Value {
 
     companion object {

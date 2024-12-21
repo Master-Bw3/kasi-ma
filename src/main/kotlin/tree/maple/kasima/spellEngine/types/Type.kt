@@ -1,5 +1,6 @@
 package tree.maple.kasima.spellEngine.types
 
+import tree.maple.kasima.api.registry.TypeRegistry
 import kotlin.reflect.KClass
 
 abstract class Type<T: Value> {

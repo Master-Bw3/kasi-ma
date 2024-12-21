@@ -5,10 +5,11 @@ import net.minecraft.block.BlockState
 import net.minecraft.block.PillarBlock
 import net.minecraft.state.StateManager
 import net.minecraft.state.property.IntProperty
-import javax.swing.event.HyperlinkEvent.EventType.ACTIVATED
+import net.minecraft.util.Identifier
 
 
-class RuneLog(settings: Settings) : PillarBlock(settings) {
+class RuneLog(settings: Settings) : PillarBlock(settings), Translucent,
+    AxeMineable {
 
     init {
         defaultState = defaultState.with(RUNE, 0)
@@ -18,6 +19,7 @@ class RuneLog(settings: Settings) : PillarBlock(settings) {
         builder.add(RUNE)
         super.appendProperties(builder)
     }
+
 
     companion object {
         val RUNE: IntProperty = IntProperty.of("rune", 0, 500)
