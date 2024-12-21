@@ -2,16 +2,13 @@ package tree.maple.kasima
 
 import net.fabricmc.api.ModInitializer
 import net.minecraft.util.Identifier
-import org.lwjgl.glfw.GLFW
-import org.lwjgl.glfw.GLFW.GLFW_CURSOR
-import org.lwjgl.glfw.GLFW.GLFW_CURSOR_NORMAL
 import org.slf4j.LoggerFactory
 import tree.maple.kasima.api.registry.RuneRegistry
 import tree.maple.kasima.api.registry.TypeRegistry
 import tree.maple.kasima.blocks.KasimaBlocks
 import tree.maple.kasima.blocks.blockEntities.KasimaBlockEntities
 import tree.maple.kasima.items.KasimaItems
-import tree.maple.kasima.spellEngine.runes.KasimaRunes
+import tree.maple.kasima.spellEngine.KasimaRunes
 import tree.maple.kasima.spellEngine.types.KasimaTypes
 
 

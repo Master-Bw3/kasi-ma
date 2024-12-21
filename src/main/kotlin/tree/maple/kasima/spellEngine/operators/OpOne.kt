@@ -1,12 +1,10 @@
-package tree.maple.kasima.spellEngine.runes
+package tree.maple.kasima.spellEngine.operators
 
 import tree.maple.kasima.spellEngine.types.NumberValue
+import tree.maple.kasima.spellEngine.types.SpellFunction
 import tree.maple.kasima.spellEngine.types.Type
-import java.lang.invoke.MethodHandle
-import java.lang.invoke.MethodHandles
-import java.lang.invoke.MethodType
 
-object RuneOne : Rune() {
+object OpOne : SpellFunction() {
     override val arguments: List<Type<*>> = listOf()
 
     override val returnType: Type<*>

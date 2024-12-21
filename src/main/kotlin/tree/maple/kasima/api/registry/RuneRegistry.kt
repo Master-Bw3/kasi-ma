@@ -8,7 +8,7 @@ import net.minecraft.registry.RegistryKey
 import net.minecraft.registry.SimpleRegistry
 import net.minecraft.util.Identifier
 import tree.maple.kasima.KasiMa
-import tree.maple.kasima.spellEngine.runes.Rune
+import tree.maple.kasima.spellEngine.Rune
 import java.util.function.Supplier
 
 
