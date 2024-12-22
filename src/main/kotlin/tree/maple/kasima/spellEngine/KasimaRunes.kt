@@ -22,7 +22,9 @@ object KasimaRunes {
         return RuneRegistrationHelper.registerRune(
             rune,
             KasiMa.id(name),
-            backingBlock
+            backingBlock,
+            Identifier.ofVanilla("block/pale_oak_log"),
+            Identifier.ofVanilla ("block/pale_oak_log_horizontal")
         ).first
     }
 

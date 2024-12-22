@@ -12,12 +12,16 @@ import tree.maple.kasima.api.registry.RuneRegistry
 
 object RuneRegistrationHelper {
 
-    fun registerRune(rune: Rune, id: Identifier, material: Identifier): Pair<Rune, Block> {
-
-
+    fun registerRune(
+        rune: Rune,
+        id: Identifier,
+        material: Identifier,
+        verticalModel: Identifier,
+        horizontalModel: Identifier
+    ): Pair<Rune, Block> {
         //register block
         val block = KasimaBlocks.register(
-            { settings -> RuneLog(settings) },
+            { settings -> RuneLog(settings, verticalModel, horizontalModel, id) },
             Blocks.createLogSettings(
                 Blocks.PALE_OAK_PLANKS.defaultMapColor,
                 Blocks.PALE_OAK_WOOD.defaultMapColor,

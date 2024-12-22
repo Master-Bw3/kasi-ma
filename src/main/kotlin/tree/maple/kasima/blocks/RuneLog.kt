@@ -8,8 +8,8 @@ import net.minecraft.state.property.IntProperty
 import net.minecraft.util.Identifier
 
 
-class RuneLog(settings: Settings) : PillarBlock(settings), Translucent,
-    AxeMineable {
+class RuneLog(settings: Settings, val verticalModel: Identifier, val horizontalModel: Identifier, val runeIdentifier: Identifier)
+    : PillarBlock(settings), Translucent, AxeMineable {
 
     init {
         defaultState = defaultState.with(RUNE, 0)
