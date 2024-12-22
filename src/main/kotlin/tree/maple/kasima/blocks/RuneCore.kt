@@ -18,11 +18,9 @@ import net.minecraft.world.WorldView
 import net.minecraft.world.tick.ScheduledTickView
 import tree.maple.kasima.blocks.RuneLog.Companion.RUNE
 import tree.maple.kasima.items.KasimaItems
-import tree.maple.kasima.spellEngine.ASTNode
-import tree.maple.kasima.spellEngine.ValidationState
-import tree.maple.kasima.spellEngine.compile
 import tree.maple.kasima.api.registry.RuneRegistry
-import tree.maple.kasima.spellEngine.Rune
+import tree.maple.kasima.spellEngine.*
+import tree.maple.kasima.spellEngine.types.SpellFunctionType
 
 
 class RuneCore(settings: Settings) : Block(settings), AxeMineable {
@@ -142,10 +140,58 @@ class RuneCore(settings: Settings) : Block(settings), AxeMineable {
                 val targetPos = pos.add(direction.vector)
                 visited.add(targetPos)
                 val target = constructASTFromPhysicalTree(world, visited, targetPos, direction)
+                val returnType = getReturnType(target.validate()) as SpellFunctionType
 
+                val candidates = direction?.let {
+                    returnType.arguments.indices.map { i ->
+                        targetPos.add(direction.vector.multiply(i + 1))
+                    }
+                } ?: listOf()
 
+                if (candidates.any { visited.contains(it) }) throw Exception()
 
-                TODO()
+                visited.addAll(candidates)
+
+                val isCapture = candidates.any { blockPos ->
+                    val blockState = world.getBlockState(blockPos)
+                    val rune = RuneRegistry.first { it.block.get() == blockState.block }.rune
+
+                    rune is Rune.Gap
+                }
+
+                if (isCapture) {
+                    ASTNode.Capture(
+                        target,
+                        candidates.map { blockPos ->
+                            val blockState = world.getBlockState(blockPos)
+                            val rune = RuneRegistry.first { it.block.get() == blockState.block }.rune
+
+                            when (rune) {
+                                Rune.Gap -> null
+
+                                else -> constructASTFromPhysicalTree(
+                                    world,
+                                    visited,
+                                    blockPos,
+                                    direction,
+                                )
+
+                            }
+                        }
+                    )
+                } else {
+                    ASTNode.Apply(
+                        target,
+                        candidates.map { blockPos ->
+                            constructASTFromPhysicalTree(
+                                world,
+                                visited,
+                                blockPos,
+                                direction,
+                            )
+                        }
+                    )
+                }
 
             }
 
@@ -167,11 +213,9 @@ class RuneCore(settings: Settings) : Block(settings), AxeMineable {
                     rune is Rune.Gap
                 }
 
-
-
                 if (isCapture) {
                     ASTNode.Capture(
-                        RuneRegistry.getId(runeEntry)!!,
+                        ASTNode.OperatorRef(RuneRegistry.getId(runeEntry)!!),
                         candidates.map { blockPos ->
                             val blockState = world.getBlockState(blockPos)
                             val rune = RuneRegistry.first { it.block.get() == blockState.block }.rune

@@ -8,6 +8,8 @@ import tree.maple.kasima.spellEngine.types.Type
 import java.lang.invoke.MethodHandle
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
+import kotlin.reflect.KFunction
+import kotlin.reflect.jvm.javaMethod
 
 
 sealed class ValidationState {
@@ -20,11 +22,13 @@ data class TypeError(val node: ASTNode<*>, val actual: List<Type<*>?>) : Throwab
 
 sealed class ASTNode<T : ValidationState> {
 
+    class OperatorRef<T : ValidationState>(val operator: Identifier) : ASTNode<T>()
+
     class Operator<T : ValidationState>(val operator: Identifier, val args: List<ASTNode<T>>) : ASTNode<T>()
 
-    class Capture<T : ValidationState>(val operator: Identifier, val args: List<ASTNode<T>?>) : ASTNode<T>()
+    class Capture<T : ValidationState>(val target: ASTNode<T>, val args: List<ASTNode<T>?>) : ASTNode<T>()
 
-    class Apply<T : ValidationState>(val to: ASTNode<T>, val args: List<ASTNode<T>>) : ASTNode<T>()
+    class Apply<T : ValidationState>(val target: ASTNode<T>, val args: List<ASTNode<T>>) : ASTNode<T>()
 
 
     /**
@@ -33,20 +37,25 @@ sealed class ASTNode<T : ValidationState> {
     fun validate(): ASTNode<ValidationState.Validated> {
         return when (this) {
             is Capture<*> -> {
-                val opRef = (RuneRegistry.get(operator)!!.rune as Rune.Function).function
+                val validatedTarget = this.target.validate()
+                val targetType = getReturnType(validatedTarget)
+                if (targetType is SpellFunctionType) {
+                    val validated = this.args.map { it?.validate() }
 
-                val validated = this.args.map { it?.validate() }
+                    val expectedArgTypes = targetType.arguments
+                    val actualArgTypes = validated.map { it?.let { getReturnType(it) } }
 
-                val expectedArgTypes = opRef.arguments
-                val actualArgTypes = validated.map { it?.let { getReturnType(it) } }
-
-                for ((actual, expect) in actualArgTypes.zip(expectedArgTypes)) {
-                    if (actual != null && actual != expect) {
-                        throw TypeError(this, actualArgTypes)
+                    for ((actual, expect) in actualArgTypes.zip(expectedArgTypes)) {
+                        if (actual != null && actual != expect) {
+                            throw TypeError(this, actualArgTypes)
+                        }
                     }
-                }
 
-                Capture(this.operator, validated)
+                    Capture(validatedTarget, validated)
+                } else {
+                    //TODO: fix error
+                    throw TypeError(this, listOf())
+                }
             }
 
             is Operator<*> -> {
@@ -65,7 +74,7 @@ sealed class ASTNode<T : ValidationState> {
             }
 
             is Apply<*> -> {
-                val validatedTarget = this.to.validate()
+                val validatedTarget = this.target.validate()
                 val targetType = getReturnType(validatedTarget)
                 if (targetType is SpellFunctionType) {
                     val validated = this.args.map { it.validate() }
@@ -83,14 +92,18 @@ sealed class ASTNode<T : ValidationState> {
                     throw TypeError(this, listOf())
                 }
             }
+
+            is OperatorRef<*> -> {
+                OperatorRef(operator)
+            }
         }
     }
 }
 
 fun getReturnType(node: ASTNode<ValidationState.Validated>): Type<*> {
     return when (node) {
-        is ASTNode.Capture<*> -> object : SpellFunction() {
-            val function = (RuneRegistry.get(node.operator)!!.rune as Rune.Function).function
+        is ASTNode.Capture<ValidationState.Validated> -> object : SpellFunction() {
+            val function = getReturnType(node.target) as SpellFunctionType
 
             override val arguments: List<Type<*>>
                 get() = node.args.zip(function.arguments).filter { (a, _) -> a == null }.map { (_, b) -> b }
@@ -99,9 +112,11 @@ fun getReturnType(node: ASTNode<ValidationState.Validated>): Type<*> {
                 get() = function.returnType
         }.type
 
-        is ASTNode.Operator<*> -> (RuneRegistry.get(node.operator)!!.rune as Rune.Function).function.returnType
+        is ASTNode.Operator<ValidationState.Validated> -> (RuneRegistry.get(node.operator)!!.rune as Rune.Function).function.returnType
 
-        is ASTNode.Apply<ValidationState.Validated> -> getReturnType(node.to)
+        is ASTNode.Apply<ValidationState.Validated> -> getReturnType(node.target)
+
+        is ASTNode.OperatorRef<ValidationState.Validated> -> (RuneRegistry.get(node.operator)!!.rune as Rune.Function).function.type
     }
 }
 
@@ -121,31 +136,41 @@ fun compile(node: ASTNode<ValidationState.Validated>): SpellFunction {
 fun compileToHandle(node: ASTNode<ValidationState.Validated>): MethodHandle {
     return when (node) {
         is ASTNode.Capture<ValidationState.Validated> -> {
-            val function = (RuneRegistry.get(node.operator)!!.rune as Rune.Function).function
             val argHandles = node.args.map { it?.let { compileToHandle(it) } }
-            var handle = function.handle
+            val targetType = getReturnType(node.target) as SpellFunctionType
 
             MethodHandles.constant(SpellFunction::class.java, object : SpellFunction() {
 
                 override val arguments: List<Type<*>>
-                    get() = node.args.zip(function.arguments).filter { (a, _) -> a == null }.map { (_, b) -> b }
+                    get() = node.args.zip(targetType.arguments).filter { (a, _) -> a == null }.map { (_, b) -> b }
 
                 override val returnType: Type<*>
-                    get() = function.returnType
+                    get() = targetType.returnType
 
-                fun apply(values: List<Any>) {
-                    val valuesStream = values.iterator()
-                    argHandles.map { it?.invoke() ?: valuesStream.next() }
-                }
 
                 override val handle: MethodHandle
                     get() {
-                        val lookup = MethodHandles.lookup()
-                        val methodType =
-                            MethodType.methodType(returnType.rawType.java, arguments.map { it.rawType.java })
-                        return lookup.findVirtual(
-                            this::class.java, "apply", methodType
-                        )
+                        var handle = (compileToHandle(node.target).invoke() as SpellFunction).handle
+
+                        data class FoldData(val handle: MethodHandle, val index: Int)
+                        handle = argHandles.map { it?.invoke() }
+                            .zip(node.args.map { it?.let { getReturnType(it).rawType.java } })
+                            .fold(FoldData(handle, 0)) { acc, (arg, type) ->
+                                when (arg) {
+                                    null -> FoldData(acc.handle, acc.index.inc())
+
+                                    else -> FoldData(
+                                        MethodHandles.collectArguments(
+                                            acc.handle,
+                                            acc.index,
+                                            MethodHandles.constant(type, arg)
+                                        ),
+                                        acc.index
+                                    )
+                                }
+                            }.handle
+
+                        return handle
                     }
             })
         }
@@ -165,7 +190,8 @@ fun compileToHandle(node: ASTNode<ValidationState.Validated>): MethodHandle {
         }
 
         is ASTNode.Apply<ValidationState.Validated> -> {
-            var handle = compileToHandle(node.to)
+            //this is a hack
+            var handle = (compileToHandle(node.target).invoke() as SpellFunction).handle
 
             for (argNode in node.args) {
                 val argHandle = compileToHandle(argNode)
@@ -175,6 +201,11 @@ fun compileToHandle(node: ASTNode<ValidationState.Validated>): MethodHandle {
 
             handle
         }
+
+        is ASTNode.OperatorRef<*> -> MethodHandles.constant(
+            SpellFunction::class.java,
+            (RuneRegistry.get(node.operator)!!.rune as Rune.Function).function
+        )
 
     }
 }

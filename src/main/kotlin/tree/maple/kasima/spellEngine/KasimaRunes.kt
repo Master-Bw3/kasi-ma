@@ -15,6 +15,7 @@ object KasimaRunes {
 
     val ADD = register(Rune.Function(OpAdd), "add", PALE_OAK_LOG_ID)
     val ONE = register(Rune.Function(OpOne), "const/one", PALE_OAK_LOG_ID)
+    val APPLY = register(Rune.Apply, "apply", PALE_OAK_LOG_ID)
     val GAP = RuneRegistry.register(Rune.Gap, { Blocks.PALE_OAK_LOG }, { Blocks.PALE_OAK_LOG }, KasiMa.id("gap"))
 
     private fun register(rune: Rune, name: String, backingBlock: Identifier): Rune {
