@@ -8,4 +8,6 @@ abstract class Type<T: Value> {
     abstract fun of(value: Any) : T
 
     abstract val rawType : KClass<*>
+
+    abstract val string : String
 }

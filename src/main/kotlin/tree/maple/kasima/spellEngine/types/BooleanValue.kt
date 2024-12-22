@@ -19,6 +19,9 @@ class BooleanValue(val value: Boolean) : Value() {
             override val rawType: KClass<*>
                 get() = Boolean::class
 
+            override val string: String
+                get() = "Boolean"
+
         }
     }
 

@@ -26,6 +26,9 @@ class NumberValue : Value {
             override val rawType: KClass<*>
                 get() = Double::class
 
+            override val string: String
+                get() = "number"
+
         }
     }
 

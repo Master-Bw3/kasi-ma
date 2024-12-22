@@ -42,12 +42,15 @@ abstract class SpellFunction : Value() {
         override val rawType: KClass<*>
             get() = SpellFunction::class
 
+        override val string: String
+            get() = "(${arguments.joinToString(", ")}) -> $returnType"
+
         override fun equals(other: Any?): Boolean {
             return other is SpellFunction && arguments == other.arguments && returnType == other.returnType
         }
     }
 
     override fun toString(): String {
-        return "(${arguments.joinToString(", ")}) -> ${returnType})"
+        return "(${arguments.joinToString(", ") { it.string }}) -> ${returnType.string}"
     }
 }
