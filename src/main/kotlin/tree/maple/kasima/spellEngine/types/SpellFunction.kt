@@ -31,7 +31,7 @@ abstract class SpellFunction : Value() {
         override val returnType: Type<*>
             get() = this@SpellFunction.returnType
 
-        override fun of(value: Any): SpellFunction {
+        override fun construct(value: Any): SpellFunction {
             if (value is SpellFunction && value == this) {
                 return value
             } else {

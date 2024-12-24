@@ -15,7 +15,7 @@ class NumberValue : Value {
 
     companion object {
         val TYPE = object : Type<NumberValue>() {
-            override fun of(value: Any): NumberValue  {
+            override fun construct(value: Any): NumberValue  {
                 if (value is Double) {
                     return NumberValue(value)
                 } else {

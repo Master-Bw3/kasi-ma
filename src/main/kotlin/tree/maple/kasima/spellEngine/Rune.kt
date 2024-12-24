@@ -9,4 +9,5 @@ sealed class Rune {
     data object Gap : Rune()
 
     data object Apply : Rune()
+
 }

@@ -128,7 +128,7 @@ class RuneCore(settings: Settings) : Block(settings), AxeMineable {
         } else {
             axis.directions.firstOrNull { direction ->
                 val offsetPos = pos.add(direction.vector)
-                RuneRegistry.any { it.block == world.getBlockState(offsetPos).block }
+                RuneRegistry.any { it.block.get() == world.getBlockState(offsetPos).block }
             } ?: axis.positiveDirection
         }
 

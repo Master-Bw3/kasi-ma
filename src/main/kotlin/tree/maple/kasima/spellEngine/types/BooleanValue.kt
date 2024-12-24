@@ -8,7 +8,7 @@ class BooleanValue(val value: Boolean) : Value() {
 
     companion object {
         val TYPE = object : Type<BooleanValue>() {
-            override fun of(value: Any): BooleanValue  {
+            override fun construct(value: Any): BooleanValue  {
                 if (value is Boolean) {
                     return BooleanValue(value)
                 } else {
