@@ -16,7 +16,7 @@ import net.minecraft.registry.RegistryWrapper.WrapperLookup
 import net.minecraft.registry.tag.BlockTags
 import net.minecraft.state.property.Properties
 import net.minecraft.util.math.Direction
-import tree.maple.kasima.api.registry.RuneRegistry
+import tree.maple.kasima.api.registry.RuneBlockTokenRegistry
 import tree.maple.kasima.blocks.AxeMineable
 import tree.maple.kasima.blocks.KasimaBlocks
 import tree.maple.kasima.blocks.RuneLog
@@ -38,7 +38,7 @@ private class BlockLootTables(
     registryLookup: CompletableFuture<WrapperLookup>
 ) : FabricBlockLootTableProvider(dataOutput, registryLookup) {
     override fun generate() {
-        RuneRegistry.forEach {
+        RuneBlockTokenRegistry.forEach {
             addDrop(it.block.get(), it.material.get())
         }
 
@@ -62,8 +62,8 @@ private class BlockTagGenerator(output: FabricDataOutput?, registriesFuture: Com
 private class ModelGenerator(generator: FabricDataOutput) :
     FabricModelProvider(generator) {
     override fun generateBlockStateModels(blockStateModelGenerator: BlockStateModelGenerator) {
-        RuneRegistry.filter { it.block.get() is RuneLog }
-            .map { Pair(it.block.get() as RuneLog, RuneRegistry.getId(it)!!) }.forEach { (block, id) ->
+        RuneBlockTokenRegistry.filter { it.block.get() is RuneLog }
+            .map { Pair(it.block.get() as RuneLog, RuneBlockTokenRegistry.getId(it)!!) }.forEach { (block, id) ->
             blockStateModelGenerator.blockStateCollector.accept(
                 MultipartBlockStateSupplier.create(block)
                     .with(

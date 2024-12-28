@@ -1,15 +1,12 @@
 package tree.maple.kasima.spellEngine
 
 import net.minecraft.util.Identifier
-import tree.maple.kasima.api.registry.RuneRegistry
+import tree.maple.kasima.api.registry.RuneBlockTokenRegistry
 import tree.maple.kasima.spellEngine.types.SpellFunction
 import tree.maple.kasima.spellEngine.types.SpellFunctionType
 import tree.maple.kasima.spellEngine.types.Type
 import java.lang.invoke.MethodHandle
 import java.lang.invoke.MethodHandles
-import java.lang.invoke.MethodType
-import kotlin.reflect.KFunction
-import kotlin.reflect.jvm.javaMethod
 
 
 sealed class ValidationState {
@@ -59,7 +56,7 @@ sealed class ASTNode<T : ValidationState> {
             }
 
             is Operator<*> -> {
-                val opRef = (RuneRegistry.get(operator)!!.rune as Rune.Function).function
+                val opRef = RuneBlockTokenRegistry.get(operator)!!.function!!
 
                 val validated = this.args.map { it.validate() }
 
@@ -112,11 +109,11 @@ fun getReturnType(node: ASTNode<ValidationState.Validated>): Type<*> {
                 get() = function.returnType
         }.type
 
-        is ASTNode.Operator<ValidationState.Validated> -> (RuneRegistry.get(node.operator)!!.rune as Rune.Function).function.returnType
+        is ASTNode.Operator<ValidationState.Validated> -> RuneBlockTokenRegistry.get(node.operator)!!.function!!.returnType
 
         is ASTNode.Apply<ValidationState.Validated> -> getReturnType(node.target)
 
-        is ASTNode.OperatorRef<ValidationState.Validated> -> (RuneRegistry.get(node.operator)!!.rune as Rune.Function).function.type
+        is ASTNode.OperatorRef<ValidationState.Validated> -> RuneBlockTokenRegistry.get(node.operator)!!.function!!.type
     }
 }
 
@@ -176,7 +173,7 @@ fun compileToHandle(node: ASTNode<ValidationState.Validated>): MethodHandle {
         }
 
         is ASTNode.Operator<ValidationState.Validated> -> {
-            val function = (RuneRegistry.get(node.operator)!!.rune as Rune.Function).function
+            val function = RuneBlockTokenRegistry.get(node.operator)!!.function!!
 
             var handle = function.handle
 
@@ -204,7 +201,7 @@ fun compileToHandle(node: ASTNode<ValidationState.Validated>): MethodHandle {
 
         is ASTNode.OperatorRef<*> -> MethodHandles.constant(
             SpellFunction::class.java,
-            (RuneRegistry.get(node.operator)!!.rune as Rune.Function).function
+            RuneBlockTokenRegistry.get(node.operator)!!.function!!
         )
 
     }

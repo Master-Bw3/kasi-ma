@@ -8,17 +8,19 @@ import net.minecraft.util.Identifier
 import tree.maple.kasima.blocks.KasimaBlocks
 import tree.maple.kasima.blocks.RuneLog
 import tree.maple.kasima.spellEngine.Rune
-import tree.maple.kasima.api.registry.RuneRegistry
+import tree.maple.kasima.api.registry.RuneBlockTokenRegistry
+import tree.maple.kasima.spellEngine.compiler.Token
+import tree.maple.kasima.spellEngine.types.SpellFunction
 
 object RuneRegistrationHelper {
 
     fun registerRune(
-        rune: Rune,
         id: Identifier,
+        function: SpellFunction,
         material: Identifier,
         verticalModel: Identifier,
         horizontalModel: Identifier
-    ): Pair<Rune, Block> {
+    ): Pair<Token, Block> {
         //register block
         val block = KasimaBlocks.register(
             { settings -> RuneLog(settings, verticalModel, horizontalModel, id) },
@@ -33,13 +35,14 @@ object RuneRegistrationHelper {
         )
 
         //register rune
-        RuneRegistry.register(
-            rune,
+        RuneBlockTokenRegistry.register(
+            Token.Operator(id),
+            function,
             { block },
             { Registries.BLOCK.get(material) },
             id,
         )
 
-        return Pair(rune, block)
+        return Pair(Token.Operator(id), block)
     }
 }
