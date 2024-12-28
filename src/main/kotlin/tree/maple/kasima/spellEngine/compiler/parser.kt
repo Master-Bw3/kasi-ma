@@ -3,7 +3,10 @@ package tree.maple.kasima.spellEngine.compiler
 import net.minecraft.text.Text
 import net.minecraft.util.Identifier
 import tree.maple.kasima.KasiMa
-import java.util.LinkedList
+import tree.maple.kasima.api.registry.RuneBlockTokenRegistry
+import tree.maple.kasima.spellEngine.types.SpellFunctionType
+import tree.maple.kasima.spellEngine.types.Type
+import kotlin.collections.ArrayDeque
 
 
 sealed class Token {
@@ -29,6 +32,8 @@ sealed class CompilerError(msg: String?) : Throwable(msg) {
     class UnknownError : CompilerError(null)
 
     data class SyntaxError(val error: Text) : CompilerError(error.string)
+
+    class TypeError : CompilerError(null)
 }
 
 fun parse(tokens: ArrayDeque<Token>): ASTNode {
@@ -56,7 +61,7 @@ fun parseParens(tokens: ArrayDeque<Token>): List<ASTNode> {
 }
 
 sealed class UntypedIRNode {
-    data class Apply(val function: UntypedIRNode, val argument: UntypedIRNode, val offset: UInt) : UntypedIRNode()
+    data class Apply(val function: UntypedIRNode, val argument: UntypedIRNode, val argIndex: Int) : UntypedIRNode()
 
     data class Operator(val identifier: Identifier) : UntypedIRNode()
 }
@@ -75,25 +80,67 @@ fun constructUntypedIR(node: ASTNode): UntypedIRNode {
 
 
 fun chainApply(members: List<ASTNode>): UntypedIRNode {
-    val offsets = LinkedList<UInt>()
-    var offset = 0u
 
-    for (node in members) {
+    var offset = 0
+    var acc = constructUntypedIR(members.first())
+    for (i in 1..members.indexOfLast { it !is ASTNode.Gap }) {
+        val node = members[i]
         if (node is ASTNode.Gap) {
-            offset += 1u
+            offset += 1
         } else {
-            offsets.push(offset)
+            acc = UntypedIRNode.Apply(acc, constructUntypedIR(node), offset)
         }
-    }
-
-    val filtered = members.filter { it !is ASTNode.Gap }
-
-    var acc = constructUntypedIR(filtered.last())
-
-    for (i in filtered.size - 2 downTo 0) {
-        val node = filtered[i]
-        acc = UntypedIRNode.Apply(constructUntypedIR(node), acc, offsets.pop())
     }
 
     return acc
 }
+
+sealed class TypedIRNode() {
+    abstract val returnType: Type<*>
+
+    data class Apply(
+        val function: TypedIRNode,
+        val argument: TypedIRNode,
+        val offset: UInt,
+        override val returnType: Type<*>
+    ) : TypedIRNode()
+
+    data class Operator(val identifier: Identifier, override val returnType: Type<*>) : TypedIRNode()
+}
+
+fun typeCheck(irNode: UntypedIRNode): TypedIRNode {
+    return when (irNode) {
+        is UntypedIRNode.Apply -> typeCheckApply(irNode)
+        is UntypedIRNode.Operator -> typeCheckOperator(irNode)
+    }
+}
+
+fun typeCheckApply(irNode: UntypedIRNode.Apply): TypedIRNode {
+    val typeCheckedFunction = typeCheck(irNode.function)
+    val typeCheckedArg = typeCheck(irNode.argument)
+    val t = typeCheckedFunction.returnType
+
+    if (t is SpellFunctionType) {
+        if (t.arguments[irNode.argIndex] == typeCheckedArg.returnType) {
+
+        }
+    }
+
+    TODO()
+}
+
+fun typeCheckOperator(operatorNode: UntypedIRNode.Operator): TypedIRNode {
+    val operator = RuneBlockTokenRegistry[operatorNode.identifier]!!.function!!
+
+    return if (operator.arguments.isNotEmpty())
+        TypedIRNode.Operator(operatorNode.identifier, operator.type)
+    else
+        TypedIRNode.Operator(operatorNode.identifier, operator.returnType)
+}
+
+/*
+
+(add ~ one) ~ one
+add(one())(one())
+
+ */
