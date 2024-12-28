@@ -6,30 +6,25 @@ import java.lang.invoke.MethodType
 import kotlin.reflect.KClass
 
 abstract class SpellFunctionType : Type<SpellFunction>() {
-    abstract val arguments: List<Type<*>>
+    abstract val signature: List<Type<*>>
 
-    abstract val returnType: Type<*>
 }
 
 abstract class SpellFunction : Value() {
 
-    abstract val arguments: List<Type<*>>
-
-    abstract val returnType: Type<*>
+    abstract val signature: List<Type<*>>
 
     open val handle: MethodHandle by lazy {
         val lookup = MethodHandles.lookup()
-        val methodType = MethodType.methodType(returnType.rawType.java, arguments.map { it.rawType.java })
+        val returnType = signature.last()
+        val methodType = MethodType.methodType(returnType.rawType.java, signature.dropLast(1).map { it.rawType.java })
         lookup.findStatic(this::class.java, "apply", methodType)
     }
 
 
     override val type: Type<*> = object : SpellFunctionType() {
-        override val arguments: List<Type<*>>
-            get() = this@SpellFunction.arguments
-
-        override val returnType: Type<*>
-            get() = this@SpellFunction.returnType
+        override val signature: List<Type<*>>
+            get() = this@SpellFunction.signature
 
         override fun construct(value: Any): SpellFunction {
             if (value is SpellFunction && value == this) {
@@ -43,14 +38,14 @@ abstract class SpellFunction : Value() {
             get() = SpellFunction::class
 
         override val string: String
-            get() = "(${arguments.joinToString(", ")}) -> $returnType"
+            get() = signature.joinToString(" -> ") { it.string }
 
         override fun equals(other: Any?): Boolean {
-            return other is SpellFunction && arguments == other.arguments && returnType == other.returnType
+            return other is SpellFunctionType && signature == other.signature
         }
     }
 
     override fun toString(): String {
-        return "(${arguments.joinToString(", ") { it.string }}) -> ${returnType.string}"
+        return this.type.string
     }
 }

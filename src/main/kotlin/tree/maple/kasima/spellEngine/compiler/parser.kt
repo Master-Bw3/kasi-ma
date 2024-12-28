@@ -4,7 +4,6 @@ import net.minecraft.text.Text
 import net.minecraft.util.Identifier
 import tree.maple.kasima.KasiMa
 import tree.maple.kasima.api.registry.RuneBlockTokenRegistry
-import tree.maple.kasima.spellEngine.types.SpellFunctionType
 import tree.maple.kasima.spellEngine.types.Type
 import kotlin.collections.ArrayDeque
 
@@ -61,7 +60,7 @@ fun parseParens(tokens: ArrayDeque<Token>): List<ASTNode> {
 }
 
 sealed class UntypedIRNode {
-    data class Apply(val function: UntypedIRNode, val argument: UntypedIRNode, val argIndex: Int) : UntypedIRNode()
+    data class Apply(val function: UntypedIRNode, val argument: UntypedIRNode, val argOffset: Int) : UntypedIRNode()
 
     data class Operator(val identifier: Identifier) : UntypedIRNode()
 }
@@ -95,17 +94,17 @@ fun chainApply(members: List<ASTNode>): UntypedIRNode {
     return acc
 }
 
-sealed class TypedIRNode() {
-    abstract val returnType: Type<*>
+sealed class TypedIRNode {
+    abstract val signature: List<Type<*>>
 
     data class Apply(
         val function: TypedIRNode,
         val argument: TypedIRNode,
-        val offset: UInt,
-        override val returnType: Type<*>
+        val argOffset: Int,
+        override val signature: List<Type<*>>
     ) : TypedIRNode()
 
-    data class Operator(val identifier: Identifier, override val returnType: Type<*>) : TypedIRNode()
+    data class Operator(val identifier: Identifier, override val signature: List<Type<*>>) : TypedIRNode()
 }
 
 fun typeCheck(irNode: UntypedIRNode): TypedIRNode {
@@ -115,32 +114,24 @@ fun typeCheck(irNode: UntypedIRNode): TypedIRNode {
     }
 }
 
-fun typeCheckApply(irNode: UntypedIRNode.Apply): TypedIRNode {
-    val typeCheckedFunction = typeCheck(irNode.function)
-    val typeCheckedArg = typeCheck(irNode.argument)
-    val t = typeCheckedFunction.returnType
+fun typeCheckApply(applyNode: UntypedIRNode.Apply): TypedIRNode {
+    val typeCheckedFunction = typeCheck(applyNode.function)
+    val typeCheckedArg = typeCheck(applyNode.argument)
 
-    if (t is SpellFunctionType) {
-        if (t.arguments[irNode.argIndex] == typeCheckedArg.returnType) {
+    if (applyNode.argOffset < typeCheckedFunction.signature.size - 1 && typeCheckedArg.signature.size == 1
+        && typeCheckedArg.signature.first() == typeCheckedFunction.signature[applyNode.argOffset]
+    ) {
+        val newSignature = typeCheckedFunction.signature.toMutableList()
+        newSignature.removeAt(applyNode.argOffset)
 
-        }
+        return TypedIRNode.Apply(typeCheckedFunction, typeCheckedArg, applyNode.argOffset, newSignature)
+    } else {
+        throw CompilerError.TypeError()
     }
-
-    TODO()
 }
 
 fun typeCheckOperator(operatorNode: UntypedIRNode.Operator): TypedIRNode {
     val operator = RuneBlockTokenRegistry[operatorNode.identifier]!!.function!!
 
-    return if (operator.arguments.isNotEmpty())
-        TypedIRNode.Operator(operatorNode.identifier, operator.type)
-    else
-        TypedIRNode.Operator(operatorNode.identifier, operator.returnType)
+    return TypedIRNode.Operator(operatorNode.identifier, operator.signature)
 }
-
-/*
-
-(add ~ one) ~ one
-add(one())(one())
-
- */

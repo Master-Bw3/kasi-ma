@@ -17,10 +17,7 @@ import net.minecraft.world.tick.ScheduledTickView
 import tree.maple.kasima.blocks.RuneLog.Companion.RUNE
 import tree.maple.kasima.items.KasimaItems
 import tree.maple.kasima.api.registry.RuneBlockTokenRegistry
-import tree.maple.kasima.spellEngine.compiler.CompilerError
-import tree.maple.kasima.spellEngine.compiler.Token
-import tree.maple.kasima.spellEngine.compiler.constructUntypedIR
-import tree.maple.kasima.spellEngine.compiler.parse
+import tree.maple.kasima.spellEngine.compiler.*
 
 
 class RuneCore(settings: Settings) : Block(settings), AxeMineable {
@@ -106,13 +103,13 @@ class RuneCore(settings: Settings) : Block(settings), AxeMineable {
 
 
             val result = try {
-                val x = constructUntypedIR(parse(ArrayDeque(tokens)))
+                val x = typeCheck(constructUntypedIR(parse(ArrayDeque(tokens))))
                 Text.literal(x.toString())
             } catch (e: Throwable) {
                 if (e is CompilerError.SyntaxError) {
                     e.error
                 } else {
-                    Text.literal(e.message)
+                    Text.literal(e.message.toString())
                 }
             }
 

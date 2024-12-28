@@ -9,4 +9,6 @@ abstract class Type<T : Value> {
     abstract val rawType: KClass<*>
 
     abstract val string: String
+
+    override fun toString(): String = this.string
 }

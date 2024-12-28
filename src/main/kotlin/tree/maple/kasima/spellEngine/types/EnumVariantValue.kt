@@ -35,27 +35,25 @@ abstract class EnumType : Type<EnumVariantValue>() {
         if (variantID !in variants) throw IllegalArgumentException()
         val variant = variants[variantID]!!
         return object : SpellFunction() {
-            override val arguments: List<Type<*>> = variant.fields
-
-            override val returnType: Type<*> = this@EnumType
+            override val signature: List<Type<*>> = variant.fields.plus(this@EnumType)
 
             override val handle: MethodHandle by lazy {
                 val lookup = MethodHandles.lookup()
 
-                val methodType = MethodType.methodType(returnType.rawType.java, Array<Any>::class.java)
+                val methodType = MethodType.methodType(signature.last().rawType.java, Array<Any>::class.java)
                 var handle = lookup.findVirtual(this::class.java, "apply", methodType)
 
                 handle = MethodHandles.insertArguments(handle, 0, this)
 
                 handle
-                    .asCollector(methodType.lastParameterType(), arguments.size)
-                    .asType(MethodType.methodType(returnType.rawType.java, arguments.map { it.rawType.java }))
+                    .asCollector(methodType.lastParameterType(), signature.size)
+                    .asType(MethodType.methodType(signature.last().rawType.java, signature.map { it.rawType.java }))
             }
 
             fun apply(args: Array<Any>): EnumVariantValue {
                 return this@EnumType.construct(
                     variantID,
-                    args.zip(arguments).map { (raw, type) -> type.construct(raw) })
+                    args.zip(signature).map { (raw, type) -> type.construct(raw) })
             }
 
         }
