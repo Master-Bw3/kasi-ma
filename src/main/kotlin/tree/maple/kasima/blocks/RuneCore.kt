@@ -103,7 +103,7 @@ class RuneCore(settings: Settings) : Block(settings), AxeMineable {
 
 
             val result = try {
-                val x = typeCheck(constructUntypedIR(parse(ArrayDeque(tokens))))
+                val x = compileAndRun(tokens)
                 Text.literal(x.toString())
             } catch (e: Throwable) {
                 if (e is CompilerError.SyntaxError) {

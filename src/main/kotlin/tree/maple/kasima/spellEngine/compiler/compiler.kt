@@ -4,7 +4,12 @@ import net.minecraft.text.Text
 import net.minecraft.util.Identifier
 import tree.maple.kasima.KasiMa
 import tree.maple.kasima.api.registry.RuneBlockTokenRegistry
+import tree.maple.kasima.spellEngine.types.SpellFunction
 import tree.maple.kasima.spellEngine.types.Type
+import tree.maple.kasima.spellEngine.types.Value
+import java.lang.invoke.MethodHandle
+import java.lang.invoke.MethodHandles
+import java.util.SequencedCollection
 import kotlin.collections.ArrayDeque
 
 
@@ -134,4 +139,37 @@ fun typeCheckOperator(operatorNode: UntypedIRNode.Operator): TypedIRNode {
     val operator = RuneBlockTokenRegistry[operatorNode.identifier]!!.function!!
 
     return TypedIRNode.Operator(operatorNode.identifier, operator.signature)
+}
+
+fun compileToMethodHandle(node: TypedIRNode): MethodHandle {
+    return when (node) {
+        is TypedIRNode.Apply -> compileApplyToMethodHandle(node)
+        is TypedIRNode.Operator -> RuneBlockTokenRegistry[node.identifier]!!.function!!.handle
+    }
+}
+
+fun compileApplyToMethodHandle(node: TypedIRNode.Apply): MethodHandle {
+    val functionHandle = compileToMethodHandle(node.function)
+    val argumentHandle = compileToMethodHandle(node.argument)
+
+    return MethodHandles.collectArguments(functionHandle, node.argOffset, argumentHandle)
+}
+
+fun compileToFunction(node: TypedIRNode): SpellFunction =
+    object : SpellFunction() {
+        override val signature: List<Type<*>> = node.signature
+
+        override val handle: MethodHandle = compileToMethodHandle(node)
+    }
+
+fun compileAndRun(program: Collection<Token>): Value {
+    val function = compileToFunction(typeCheck(constructUntypedIR(parse(ArrayDeque(program)))))
+
+    return if (function.signature.size > 1) {
+        function
+    } else {
+        function.signature[0].construct(
+            function.handle.invoke()
+        )
+    }
 }
