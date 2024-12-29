@@ -4,12 +4,13 @@ import net.fabricmc.api.ModInitializer
 import net.minecraft.util.Identifier
 import org.slf4j.LoggerFactory
 import tree.maple.kasima.api.registry.RuneBlockTokenRegistry
-import tree.maple.kasima.api.registry.ValueEndecRegistry
 import tree.maple.kasima.blocks.KasimaBlocks
 import tree.maple.kasima.blocks.blockEntities.KasimaBlockEntities
 import tree.maple.kasima.items.KasimaItems
 import tree.maple.kasima.spellEngine.KasimaRunes
-import tree.maple.kasima.spellEngine.types.KasimaValueEndecs
+import tree.maple.kasima.spellEngine.compiler.ASTNode
+import tree.maple.kasima.spellEngine.compiler.InferenceEnv
+import tree.maple.kasima.spellEngine.compiler.constructUntypedIR
 
 
 object KasiMa : ModInitializer {
@@ -26,13 +27,26 @@ object KasiMa : ModInitializer {
         // Proceed with mild caution.
         logger.info("Hello Fabric world!")
 
-        ValueEndecRegistry.initialize()
         RuneBlockTokenRegistry.initialize()
 
         KasimaItems.initialize()
         KasimaBlocks.initialize()
         KasimaRunes.initialize()
         KasimaBlockEntities.initialize()
-        KasimaValueEndecs.initialize()
+
+
+        val program = ASTNode.Group(
+            listOf(
+                ASTNode.Operator(KasiMa.id("list/one")),
+                ASTNode.Operator(KasiMa.id("const/one")),
+            )
+        )
+
+        val env = InferenceEnv()
+        val result = env.inferNode(constructUntypedIR(program))
+        env.solveConstraints()
+        val substituted = env.substituteNode(result)
+
+        println(substituted)
     }
 }

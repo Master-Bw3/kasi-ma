@@ -9,7 +9,7 @@ import net.minecraft.registry.SimpleRegistry
 import net.minecraft.util.Identifier
 import tree.maple.kasima.KasiMa
 import tree.maple.kasima.spellEngine.compiler.Token
-import tree.maple.kasima.spellEngine.types.SpellFunction
+import tree.maple.kasima.spellEngine.operators.Operator
 import java.util.function.Supplier
 
 
@@ -25,7 +25,7 @@ private val REGISTRY: Registry<RuneRegistryEntry> = FabricRegistryBuilder.from(
 
 
 object RuneBlockTokenRegistry : Registry<RuneRegistryEntry> by REGISTRY {
-    fun register(token: Token, function: SpellFunction?, block: Supplier<Block>, material: Supplier<Block>, id: Identifier): Token {
+    fun register(token: Token, function: Operator?, block: Supplier<Block>, material: Supplier<Block>, id: Identifier): Token {
         return Registry.register(
             REGISTRY,
             id,
@@ -36,4 +36,4 @@ object RuneBlockTokenRegistry : Registry<RuneRegistryEntry> by REGISTRY {
     fun initialize() {}
 }
 
-data class RuneRegistryEntry(val token: Token, val function: SpellFunction?, val block: Supplier<Block>, val material: Supplier<Block>)
+data class RuneRegistryEntry(val token: Token, val operator: Operator?, val block: Supplier<Block>, val material: Supplier<Block>)

@@ -1,12 +1,11 @@
 package tree.maple.kasima.spellEngine.operators
 
-import tree.maple.kasima.spellEngine.types.NumberTypeConstructor
-import tree.maple.kasima.spellEngine.types.NumberValue
-import tree.maple.kasima.spellEngine.types.SpellFunction
-import tree.maple.kasima.spellEngine.types.TypeConstructor
+import tree.maple.kasima.spellEngine.compiler.BuiltInType
+import tree.maple.kasima.spellEngine.compiler.Type
 
-object OpAdd : SpellFunction() {
-    override val signature: List<TypeConstructor<*>> = listOf(NumberTypeConstructor, NumberTypeConstructor, NumberTypeConstructor)
+
+object OpAdd : Operator() {
+    override val type: Type.Function = Type.Function(listOf(BuiltInType.NUMBER, BuiltInType.NUMBER, BuiltInType.NUMBER))
 
     @JvmStatic
     fun apply(a: Double, b: Double): Double = a + b

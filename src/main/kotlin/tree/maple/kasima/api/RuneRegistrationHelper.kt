@@ -9,13 +9,13 @@ import tree.maple.kasima.blocks.KasimaBlocks
 import tree.maple.kasima.blocks.RuneLog
 import tree.maple.kasima.api.registry.RuneBlockTokenRegistry
 import tree.maple.kasima.spellEngine.compiler.Token
-import tree.maple.kasima.spellEngine.types.SpellFunction
+import tree.maple.kasima.spellEngine.operators.Operator
 
 object RuneRegistrationHelper {
 
     fun registerRune(
         id: Identifier,
-        function: SpellFunction,
+        function: Operator,
         material: Identifier,
         verticalModel: Identifier,
         horizontalModel: Identifier

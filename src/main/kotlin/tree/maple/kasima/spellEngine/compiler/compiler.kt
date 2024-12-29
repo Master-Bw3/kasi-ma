@@ -4,9 +4,7 @@ import net.minecraft.text.Text
 import net.minecraft.util.Identifier
 import tree.maple.kasima.KasiMa
 import tree.maple.kasima.api.registry.RuneBlockTokenRegistry
-import tree.maple.kasima.spellEngine.types.SpellFunction
-import tree.maple.kasima.spellEngine.types.TypeConstructor
-import tree.maple.kasima.spellEngine.types.Value
+import tree.maple.kasima.spellEngine.operators.Operator
 import java.lang.invoke.MethodHandle
 import java.lang.invoke.MethodHandles
 import kotlin.collections.ArrayDeque
@@ -36,7 +34,7 @@ sealed class CompilerError(msg: String?) : Throwable(msg) {
 
     data class SyntaxError(val error: Text) : CompilerError(error.string)
 
-    class TypeError : CompilerError(null)
+    class TypeError(msg: String) : CompilerError(msg)
 }
 
 fun parse(tokens: ArrayDeque<Token>): ASTNode {
@@ -99,51 +97,191 @@ fun chainApply(members: List<ASTNode>): UntypedIRNode {
 }
 
 sealed class TypedIRNode {
-    abstract val signature: List<TypeConstructor<*>>
+    abstract val type: Type.Function
 
     data class Apply(
         val function: TypedIRNode,
         val argument: TypedIRNode,
         val argOffset: Int,
-        override val signature: List<TypeConstructor<*>>
+        override val type: Type.Function
     ) : TypedIRNode()
 
-    data class Operator(val identifier: Identifier, override val signature: List<TypeConstructor<*>>) : TypedIRNode()
+    data class Operator(val identifier: Identifier, override val type: Type.Function) : TypedIRNode()
 }
 
-fun typeCheck(irNode: UntypedIRNode): TypedIRNode {
-    return when (irNode) {
-        is UntypedIRNode.Apply -> typeCheckApply(irNode)
-        is UntypedIRNode.Operator -> typeCheckOperator(irNode)
+sealed class Constraint {
+    data class Equality(val t1: Type, val t2: Type) : Constraint()
+}
+
+class InferenceEnv {
+    val typeConstraints: MutableList<Constraint> = mutableListOf()
+    val substitutions: MutableList<Type> = mutableListOf()
+
+    fun createTypeVar(): Type.Var {
+        val variable = Type.Var(substitutions.size)
+        substitutions.add(variable)
+        return variable
     }
-}
 
-fun typeCheckApply(applyNode: UntypedIRNode.Apply): TypedIRNode {
-    val typeCheckedFunction = typeCheck(applyNode.function)
-    val typeCheckedArg = typeCheck(applyNode.argument)
+    fun inferNode(node: UntypedIRNode): TypedIRNode =
+        when (node) {
+            is UntypedIRNode.Apply -> {
+                val inferredFunction = inferNode(node.function)
+                val inferredArg = inferNode(node.argument)
 
-    if (applyNode.argOffset < typeCheckedFunction.signature.size - 1 && typeCheckedArg.signature.size == 1
-        && typeCheckedArg.signature.first() == typeCheckedFunction.signature[applyNode.argOffset]
-    ) {
-        val newSignature = typeCheckedFunction.signature.toMutableList()
-        newSignature.removeAt(applyNode.argOffset)
+                if (node.argOffset < inferredFunction.type.signature.size - 1 && inferredArg.type.signature.size == 1) {
+                    val newSignature = inferredFunction.type.signature.toMutableList()
+                    newSignature.removeAt(node.argOffset)
 
-        return TypedIRNode.Apply(typeCheckedFunction, typeCheckedArg, applyNode.argOffset, newSignature)
-    } else {
-        throw CompilerError.TypeError()
+                    var param = inferredFunction.type.signature[node.argOffset]
+                    if (param !is Type.Function) param = Type.Function(listOf(param))
+
+                    typeConstraints += Constraint.Equality(
+                        param,
+                        inferredArg.type
+                    )
+
+                    TypedIRNode.Apply(inferredFunction, inferredArg, node.argOffset, Type.Function(newSignature))
+                } else {
+                    throw CompilerError.TypeError("invalid apply arguments")
+                }
+            }
+
+            is UntypedIRNode.Operator -> {
+                val opType = RuneBlockTokenRegistry[node.identifier]!!.operator!!.type
+
+                val inferredSignature = inferSignature(opType.signature, mapOf())
+
+                TypedIRNode.Operator(
+                    node.identifier,
+                    Type.Function(inferredSignature)
+                )
+            }
+        }
+
+    private fun inferSignature(signature: List<Type>, environment: Map<UInt, Type>): List<Type> {
+        val inferredOpSignature = mutableListOf<Type>()
+        val currentEnv = environment.toMutableMap()
+
+        for (type in signature) {
+            when (type) {
+                is Type.Named -> inferredOpSignature.add(type)
+
+                is Type.Function -> {
+                    val inferred = inferSignature(type.signature, mapOf())
+
+                    inferredOpSignature.add(Type.Function(inferred))
+                }
+
+                is Type.Generic -> {
+                    val variable = currentEnv.getOrPut(type.id, ::createTypeVar)
+                    inferredOpSignature.add(variable)
+                    currentEnv += type.id to variable
+                }
+
+                is Type.Var -> inferredOpSignature.add(type)
+
+            }
+        }
+
+        return inferredOpSignature
     }
-}
 
-fun typeCheckOperator(operatorNode: UntypedIRNode.Operator): TypedIRNode {
-    val operator = RuneBlockTokenRegistry[operatorNode.identifier]!!.function!!
+    fun solveConstraints() {
+        typeConstraints.map { it as Constraint.Equality }.forEach { (t1, t2) -> unify(t1, t2) }
+        typeConstraints.clear()
+    }
 
-    return TypedIRNode.Operator(operatorNode.identifier, operator.signature)
+    private fun unify(t1: Type, t2: Type) {
+        if (t1 is Type.Var && substitutions[t1.index] != t1) {
+            unify(substitutions[t1.index], t2)
+
+        } else if (t2 is Type.Var && substitutions[t2.index] != t2) {
+            unify(t1, substitutions[t2.index])
+
+        } else if (t1 is Type.Var) {
+            substitutions[t1.index] = t2
+
+        } else if (t2 is Type.Var) {
+            substitutions[t2.index] = t1
+
+        } else if (t1 is Type.Named && t2 is Type.Named && t1.name == t2.name) {
+            if (t1.genericArgs.size != t2.genericArgs.size)
+                throw CompilerError.TypeError("Generics mismatch: ${t1.genericArgs} vs. ${t2.genericArgs}")
+            t1.genericArgs.zip(t2.genericArgs).forEach { (t1, t2) -> unify(t1, t2) }
+
+        } else if (t1 is Type.Function && t2 is Type.Function) {
+            if (t1.signature.size != t2.signature.size)
+                throw CompilerError.TypeError("Signature mismatch: ${t1.signature} vs. ${t2.signature}")
+            t1.signature.zip(t2.signature).forEach { (t1, t2) -> unify(t1, t2) }
+
+        } else throw CompilerError.TypeError("Type mismatch: $t1 vs. $t2")
+    }
+
+    fun substituteNode(node: TypedIRNode): TypedIRNode {
+        return when (node) {
+            is TypedIRNode.Apply -> TypedIRNode.Apply(
+                substituteNode(node.function),
+                substituteNode(node.argument),
+                node.argOffset,
+                substituteFunctionType(node.type)
+            )
+
+            is TypedIRNode.Operator -> TypedIRNode.Operator(
+                node.identifier,
+                substituteFunctionType(node.type)
+            )
+        }
+    }
+
+    private fun substituteType(type: Type): Type {
+        return when (type) {
+            is Type.Function -> substituteFunctionType(type)
+            is Type.Generic -> type
+            is Type.Named -> Type.Named(type.name, type.rawType, type.genericArgs.map { substituteType(it) })
+            is Type.Var -> substitutions[type.index]
+        }
+    }
+
+    private fun substituteFunctionType(type: Type.Function) =
+        Type.Function(type.signature.map { substituteType(it) })
+
+
 }
+//
+//fun typeCheck(irNode: UntypedIRNode): TypedIRNode {
+//    return when (irNode) {
+//        is UntypedIRNode.Apply -> typeCheckApply(irNode)
+//        is UntypedIRNode.Operator -> typeCheckOperator(irNode)
+//    }
+//}
+//
+//fun typeCheckApply(applyNode: UntypedIRNode.Apply): TypedIRNode {
+//    val typeCheckedFunction = typeCheck(applyNode.function)
+//    val typeCheckedArg = typeCheck(applyNode.argument)
+//
+//    if (applyNode.argOffset < typeCheckedFunction.type.signature.size - 1 && typeCheckedArg.type.signature.size == 1
+//        && typeCheckedArg.type.signature.first() == typeCheckedFunction.type.signature[applyNode.argOffset]
+//    ) {
+//        val newSignature = typeCheckedFunction.type.signature.toMutableList()
+//        newSignature.removeAt(applyNode.argOffset)
+//
+//        return TypedIRNode.Apply(typeCheckedFunction, typeCheckedArg, applyNode.argOffset, Type.Function(newSignature))
+//    } else {
+//        throw CompilerError.TypeError(TODO())
+//    }
+//}
+//
+//fun typeCheckOperator(operatorNode: UntypedIRNode.Operator): TypedIRNode {
+//    val operator = RuneBlockTokenRegistry[operatorNode.identifier]!!.operator!!
+//
+//    return TypedIRNode.Operator(operatorNode.identifier, operator.type)
+//}
 
 fun compileToMethodHandle(node: TypedIRNode): MethodHandle {
     return when (node) {
         is TypedIRNode.Apply -> compileApplyToMethodHandle(node)
-        is TypedIRNode.Operator -> RuneBlockTokenRegistry[node.identifier]!!.function!!.handle
+        is TypedIRNode.Operator -> RuneBlockTokenRegistry[node.identifier]!!.operator!!.handle
     }
 }
 
@@ -154,21 +292,21 @@ fun compileApplyToMethodHandle(node: TypedIRNode.Apply): MethodHandle {
     return MethodHandles.collectArguments(functionHandle, node.argOffset, argumentHandle)
 }
 
-fun compileToFunction(node: TypedIRNode): SpellFunction =
-    object : SpellFunction() {
-        override val signature: List<TypeConstructor<*>> = node.signature
+fun compileToFunction(node: TypedIRNode): Operator =
+    object : Operator() {
+        override val type = node.type
 
         override val handle: MethodHandle = compileToMethodHandle(node)
     }
 
-fun compileAndRun(program: Collection<Token>): Value {
-    val function = compileToFunction(typeCheck(constructUntypedIR(parse(ArrayDeque(program)))))
-
-    return if (function.signature.size > 1) {
-        function
-    } else {
-        function.signature[0].construct(
-            function.handle.invoke()
-        )
-    }
+fun compileAndRun(program: Collection<Token>): Any {
+//    val function = compileToFunction(typeCheck(constructUntypedIR(parse(ArrayDeque(program)))))
+//
+//    return if (function.type.signature.size > 1) {
+//        function
+//    } else {
+//        function.handle.invoke()
+//    }
+    TODO()
 }
+

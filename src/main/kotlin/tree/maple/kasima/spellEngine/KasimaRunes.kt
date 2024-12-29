@@ -8,9 +8,9 @@ import tree.maple.kasima.api.RuneRegistrationHelper
 import tree.maple.kasima.api.registry.RuneBlockTokenRegistry
 import tree.maple.kasima.spellEngine.compiler.Token
 import tree.maple.kasima.spellEngine.operators.OpAdd
+import tree.maple.kasima.spellEngine.operators.OpListOfOne
 import tree.maple.kasima.spellEngine.operators.OpOne
-import tree.maple.kasima.spellEngine.types.MaybeTypeConstructor
-import tree.maple.kasima.spellEngine.types.SpellFunction
+import tree.maple.kasima.spellEngine.operators.Operator
 
 object KasimaRunes {
 
@@ -18,11 +18,11 @@ object KasimaRunes {
 
     val ADD = register(OpAdd, "add", PALE_OAK_LOG_ID)
     val ONE = register(OpOne, "const/one", PALE_OAK_LOG_ID)
-    val SOME = register(MaybeTypeConstructor.generateConstructor(MaybeTypeConstructor.SOME), "some", PALE_OAK_LOG_ID)
+    val LISTONE = register(OpListOfOne, "list/one", PALE_OAK_LOG_ID)
 
     val GAP = RuneBlockTokenRegistry.register(Token.Gap, null, { Blocks.PALE_OAK_LOG }, { Blocks.PALE_OAK_LOG }, KasiMa.id("gap"))
 
-    private fun register(function: SpellFunction, name: String, backingBlock: Identifier): Token {
+    private fun register(function: Operator, name: String, backingBlock: Identifier): Token {
         return RuneRegistrationHelper.registerRune(
             KasiMa.id(name),
             function,
