@@ -12,7 +12,6 @@ import net.minecraft.registry.entry.RegistryEntry
 import net.minecraft.registry.entry.RegistryEntryInfo
 import net.minecraft.util.Identifier
 import tree.maple.kasima.KasiMa
-import tree.maple.kasima.spellEngine.types.Type
 import tree.maple.kasima.spellEngine.types.Value
 
 private val REGISTRY_KEY: RegistryKey<Registry<Endec<out Value>>> =

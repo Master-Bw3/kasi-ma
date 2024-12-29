@@ -5,11 +5,10 @@ import net.minecraft.util.Identifier
 import tree.maple.kasima.KasiMa
 import tree.maple.kasima.api.registry.RuneBlockTokenRegistry
 import tree.maple.kasima.spellEngine.types.SpellFunction
-import tree.maple.kasima.spellEngine.types.Type
+import tree.maple.kasima.spellEngine.types.TypeConstructor
 import tree.maple.kasima.spellEngine.types.Value
 import java.lang.invoke.MethodHandle
 import java.lang.invoke.MethodHandles
-import java.util.SequencedCollection
 import kotlin.collections.ArrayDeque
 
 
@@ -100,16 +99,16 @@ fun chainApply(members: List<ASTNode>): UntypedIRNode {
 }
 
 sealed class TypedIRNode {
-    abstract val signature: List<Type<*>>
+    abstract val signature: List<TypeConstructor<*>>
 
     data class Apply(
         val function: TypedIRNode,
         val argument: TypedIRNode,
         val argOffset: Int,
-        override val signature: List<Type<*>>
+        override val signature: List<TypeConstructor<*>>
     ) : TypedIRNode()
 
-    data class Operator(val identifier: Identifier, override val signature: List<Type<*>>) : TypedIRNode()
+    data class Operator(val identifier: Identifier, override val signature: List<TypeConstructor<*>>) : TypedIRNode()
 }
 
 fun typeCheck(irNode: UntypedIRNode): TypedIRNode {
@@ -157,7 +156,7 @@ fun compileApplyToMethodHandle(node: TypedIRNode.Apply): MethodHandle {
 
 fun compileToFunction(node: TypedIRNode): SpellFunction =
     object : SpellFunction() {
-        override val signature: List<Type<*>> = node.signature
+        override val signature: List<TypeConstructor<*>> = node.signature
 
         override val handle: MethodHandle = compileToMethodHandle(node)
     }

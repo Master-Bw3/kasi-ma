@@ -9,7 +9,7 @@ import tree.maple.kasima.api.registry.RuneBlockTokenRegistry
 import tree.maple.kasima.spellEngine.compiler.Token
 import tree.maple.kasima.spellEngine.operators.OpAdd
 import tree.maple.kasima.spellEngine.operators.OpOne
-import tree.maple.kasima.spellEngine.types.MaybeType
+import tree.maple.kasima.spellEngine.types.MaybeTypeConstructor
 import tree.maple.kasima.spellEngine.types.SpellFunction
 
 object KasimaRunes {
@@ -18,7 +18,7 @@ object KasimaRunes {
 
     val ADD = register(OpAdd, "add", PALE_OAK_LOG_ID)
     val ONE = register(OpOne, "const/one", PALE_OAK_LOG_ID)
-    val SOME = register(MaybeType.generateConstructor(MaybeType.SOME), "some", PALE_OAK_LOG_ID)
+    val SOME = register(MaybeTypeConstructor.generateConstructor(MaybeTypeConstructor.SOME), "some", PALE_OAK_LOG_ID)
 
     val GAP = RuneBlockTokenRegistry.register(Token.Gap, null, { Blocks.PALE_OAK_LOG }, { Blocks.PALE_OAK_LOG }, KasiMa.id("gap"))
 

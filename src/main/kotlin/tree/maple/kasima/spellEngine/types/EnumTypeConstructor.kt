@@ -7,9 +7,9 @@ import java.lang.invoke.MethodType
 import kotlin.reflect.KClass
 
 
-data class VariantType(val fields: List<Type<*>>)
+data class VariantType(val fields: List<TypeConstructor<*>>)
 
-abstract class EnumType : Type<EnumVariantValue>() {
+abstract class EnumTypeConstructor : TypeConstructor<EnumVariantValue>() {
     abstract val id: Identifier
     abstract val variants: Map<Identifier, VariantType>
 
@@ -35,7 +35,7 @@ abstract class EnumType : Type<EnumVariantValue>() {
         if (variantID !in variants) throw IllegalArgumentException()
         val variant = variants[variantID]!!
         return object : SpellFunction() {
-            override val signature: List<Type<*>> = variant.fields.plus(this@EnumType)
+            override val signature: List<TypeConstructor<*>> = variant.fields.plus(this@EnumTypeConstructor)
 
             override val handle: MethodHandle by lazy {
                 val lookup = MethodHandles.lookup()
@@ -51,7 +51,7 @@ abstract class EnumType : Type<EnumVariantValue>() {
             }
 
             fun apply(args: Array<Any>): EnumVariantValue {
-                return this@EnumType.construct(
+                return this@EnumTypeConstructor.construct(
                     variantID,
                     args.zip(signature).map { (raw, type) -> type.construct(raw) })
             }
@@ -65,7 +65,7 @@ abstract class EnumType : Type<EnumVariantValue>() {
         get() = "Enum($id)"
 
     override fun equals(other: Any?): Boolean {
-        return other is EnumType && other.id == this.id && other.variants == this.variants
+        return other is EnumTypeConstructor && other.id == this.id && other.variants == this.variants
     }
 
     override fun hashCode(): Int {
@@ -74,7 +74,7 @@ abstract class EnumType : Type<EnumVariantValue>() {
 
 }
 
-data class EnumVariantValue(val variantID: Identifier, val values: List<Value>, override val type: EnumType) : Value() {
+data class EnumVariantValue(val variantID: Identifier, val values: List<Value>, override val type: EnumTypeConstructor) : Value() {
 
     override fun toString(): String {
         return "$variantID(${values.joinToString(", ")})"

@@ -5,14 +5,14 @@ import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
 import kotlin.reflect.KClass
 
-abstract class SpellFunctionType : Type<SpellFunction>() {
-    abstract val signature: List<Type<*>>
+abstract class SpellFunctionTypeConstructor : TypeConstructor<SpellFunction>() {
+    abstract val signature: List<TypeConstructor<*>>
 
 }
 
 abstract class SpellFunction : Value() {
 
-    abstract val signature: List<Type<*>>
+    abstract val signature: List<TypeConstructor<*>>
 
     open val handle: MethodHandle by lazy {
         val lookup = MethodHandles.lookup()
@@ -22,8 +22,8 @@ abstract class SpellFunction : Value() {
     }
 
 
-    override val type: Type<*> = object : SpellFunctionType() {
-        override val signature: List<Type<*>>
+    override val type: TypeConstructor<*> = object : SpellFunctionTypeConstructor() {
+        override val signature: List<TypeConstructor<*>>
             get() = this@SpellFunction.signature
 
         override fun construct(value: Any): SpellFunction {
@@ -41,7 +41,7 @@ abstract class SpellFunction : Value() {
             get() = signature.joinToString(" -> ") { it.string }
 
         override fun equals(other: Any?): Boolean {
-            return other is SpellFunctionType && signature == other.signature
+            return other is SpellFunctionTypeConstructor && signature == other.signature
         }
     }
 

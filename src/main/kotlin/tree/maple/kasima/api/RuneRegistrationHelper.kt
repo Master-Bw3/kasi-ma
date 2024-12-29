@@ -7,7 +7,6 @@ import net.minecraft.sound.BlockSoundGroup
 import net.minecraft.util.Identifier
 import tree.maple.kasima.blocks.KasimaBlocks
 import tree.maple.kasima.blocks.RuneLog
-import tree.maple.kasima.spellEngine.Rune
 import tree.maple.kasima.api.registry.RuneBlockTokenRegistry
 import tree.maple.kasima.spellEngine.compiler.Token
 import tree.maple.kasima.spellEngine.types.SpellFunction
