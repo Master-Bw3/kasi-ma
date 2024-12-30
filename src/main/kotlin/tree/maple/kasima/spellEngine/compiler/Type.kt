@@ -18,6 +18,6 @@ sealed class Type {
 
 
 object BuiltInType {
-    val NUMBER = Type.Named("Number", Double::class, listOf())
-    val LIST = Type.Named("Number", Double::class, listOf(Type.Generic(1u)))
+    val number = Type.Named("Number", Double::class, listOf())
+    fun list(a: Type.Generic) = Type.Named("List", List::class, listOf(a))
 }

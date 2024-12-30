@@ -5,7 +5,7 @@ import tree.maple.kasima.spellEngine.compiler.Type
 
 
 object OpAdd : Operator() {
-    override val type: Type.Function = Type.Function(listOf(BuiltInType.NUMBER, BuiltInType.NUMBER, BuiltInType.NUMBER))
+    override val type: Type.Function = Type.Function(listOf(BuiltInType.number, BuiltInType.number, BuiltInType.number))
 
     @JvmStatic
     fun apply(a: Double, b: Double): Double = a + b

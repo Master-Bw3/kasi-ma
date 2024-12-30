@@ -113,17 +113,30 @@ sealed class Constraint {
     data class Equality(val t1: Type, val t2: Type) : Constraint()
 }
 
-class InferenceEnv {
-    val typeConstraints: MutableList<Constraint> = mutableListOf()
-    val substitutions: MutableList<Type> = mutableListOf()
+class InferenceEnv private constructor(node: UntypedIRNode) {
+    private val typeConstraints: MutableList<Constraint> = mutableListOf()
+    private val substitutions: MutableList<Type> = mutableListOf()
+    private var node: TypedIRNode
 
-    fun createTypeVar(): Type.Var {
+    init {
+        this.node = inferNode(node)
+    }
+
+    fun substitute(): TypedIRNode = substituteNode(node)
+
+    fun solveConstraints(): InferenceEnv {
+        typeConstraints.map { it as Constraint.Equality }.forEach { (t1, t2) -> unify(t1, t2) }
+        typeConstraints.clear()
+        return this
+    }
+
+    private fun createTypeVar(): Type.Var {
         val variable = Type.Var(substitutions.size)
         substitutions.add(variable)
         return variable
     }
 
-    fun inferNode(node: UntypedIRNode): TypedIRNode =
+    private fun inferNode(node: UntypedIRNode): TypedIRNode =
         when (node) {
             is UntypedIRNode.Apply -> {
                 val inferredFunction = inferNode(node.function)
@@ -150,7 +163,7 @@ class InferenceEnv {
             is UntypedIRNode.Operator -> {
                 val opType = RuneBlockTokenRegistry[node.identifier]!!.operator!!.type
 
-                val inferredSignature = inferSignature(opType.signature, mapOf())
+                val inferredSignature = inferSignature(opType.signature)
 
                 TypedIRNode.Operator(
                     node.identifier,
@@ -159,37 +172,25 @@ class InferenceEnv {
             }
         }
 
-    private fun inferSignature(signature: List<Type>, environment: Map<UInt, Type>): List<Type> {
-        val inferredOpSignature = mutableListOf<Type>()
-        val currentEnv = environment.toMutableMap()
-
-        for (type in signature) {
-            when (type) {
-                is Type.Named -> inferredOpSignature.add(type)
-
-                is Type.Function -> {
-                    val inferred = inferSignature(type.signature, mapOf())
-
-                    inferredOpSignature.add(Type.Function(inferred))
-                }
-
-                is Type.Generic -> {
-                    val variable = currentEnv.getOrPut(type.id, ::createTypeVar)
-                    inferredOpSignature.add(variable)
-                    currentEnv += type.id to variable
-                }
-
-                is Type.Var -> inferredOpSignature.add(type)
-
-            }
-        }
-
-        return inferredOpSignature
+    private fun inferSignature(signature: List<Type>): List<Type> {
+        val env = mutableMapOf<UInt, Type>()
+        return signature.map { inferType(it, env) }
     }
 
-    fun solveConstraints() {
-        typeConstraints.map { it as Constraint.Equality }.forEach { (t1, t2) -> unify(t1, t2) }
-        typeConstraints.clear()
+    private fun inferType(type: Type, environment: MutableMap<UInt, Type>): Type {
+        return when (type) {
+            is Type.Named -> Type.Named(type.name, type.rawType, type.genericArgs.map { inferType(it, mutableMapOf()) })
+
+            is Type.Function -> {
+                val inferred = inferSignature(type.signature)
+
+                Type.Function(inferred)
+            }
+
+            is Type.Generic -> environment.getOrPut(type.id, ::createTypeVar)
+
+            is Type.Var -> type
+        }
     }
 
     private fun unify(t1: Type, t2: Type) {
@@ -218,7 +219,7 @@ class InferenceEnv {
         } else throw CompilerError.TypeError("Type mismatch: $t1 vs. $t2")
     }
 
-    fun substituteNode(node: TypedIRNode): TypedIRNode {
+    private fun substituteNode(node: TypedIRNode): TypedIRNode {
         return when (node) {
             is TypedIRNode.Apply -> TypedIRNode.Apply(
                 substituteNode(node.function),
@@ -246,37 +247,11 @@ class InferenceEnv {
     private fun substituteFunctionType(type: Type.Function) =
         Type.Function(type.signature.map { substituteType(it) })
 
+    companion object {
+        fun inferNode(node: UntypedIRNode) = InferenceEnv(node)
+    }
 
 }
-//
-//fun typeCheck(irNode: UntypedIRNode): TypedIRNode {
-//    return when (irNode) {
-//        is UntypedIRNode.Apply -> typeCheckApply(irNode)
-//        is UntypedIRNode.Operator -> typeCheckOperator(irNode)
-//    }
-//}
-//
-//fun typeCheckApply(applyNode: UntypedIRNode.Apply): TypedIRNode {
-//    val typeCheckedFunction = typeCheck(applyNode.function)
-//    val typeCheckedArg = typeCheck(applyNode.argument)
-//
-//    if (applyNode.argOffset < typeCheckedFunction.type.signature.size - 1 && typeCheckedArg.type.signature.size == 1
-//        && typeCheckedArg.type.signature.first() == typeCheckedFunction.type.signature[applyNode.argOffset]
-//    ) {
-//        val newSignature = typeCheckedFunction.type.signature.toMutableList()
-//        newSignature.removeAt(applyNode.argOffset)
-//
-//        return TypedIRNode.Apply(typeCheckedFunction, typeCheckedArg, applyNode.argOffset, Type.Function(newSignature))
-//    } else {
-//        throw CompilerError.TypeError(TODO())
-//    }
-//}
-//
-//fun typeCheckOperator(operatorNode: UntypedIRNode.Operator): TypedIRNode {
-//    val operator = RuneBlockTokenRegistry[operatorNode.identifier]!!.operator!!
-//
-//    return TypedIRNode.Operator(operatorNode.identifier, operator.type)
-//}
 
 fun compileToMethodHandle(node: TypedIRNode): MethodHandle {
     return when (node) {
@@ -300,13 +275,14 @@ fun compileToFunction(node: TypedIRNode): Operator =
     }
 
 fun compileAndRun(program: Collection<Token>): Any {
-//    val function = compileToFunction(typeCheck(constructUntypedIR(parse(ArrayDeque(program)))))
-//
-//    return if (function.type.signature.size > 1) {
-//        function
-//    } else {
-//        function.handle.invoke()
-//    }
-    TODO()
+    val function = compileToFunction(
+        InferenceEnv.inferNode(constructUntypedIR(parse(ArrayDeque(program)))).solveConstraints().substitute()
+    )
+
+    return if (function.type.signature.size > 1) {
+        function
+    } else {
+        function.handle.invoke()
+    }
 }
 

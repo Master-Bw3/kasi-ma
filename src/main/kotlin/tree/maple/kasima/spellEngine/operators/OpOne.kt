@@ -4,7 +4,7 @@ import tree.maple.kasima.spellEngine.compiler.BuiltInType
 import tree.maple.kasima.spellEngine.compiler.Type
 
 object OpOne : Operator() {
-    override val type = Type.Function(listOf(BuiltInType.NUMBER))
+    override val type = Type.Function(listOf(BuiltInType.number))
 
     @JvmStatic
     fun apply(): Double = 1.0

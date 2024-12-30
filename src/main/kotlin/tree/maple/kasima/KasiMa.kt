@@ -33,20 +33,5 @@ object KasiMa : ModInitializer {
         KasimaBlocks.initialize()
         KasimaRunes.initialize()
         KasimaBlockEntities.initialize()
-
-
-        val program = ASTNode.Group(
-            listOf(
-                ASTNode.Operator(KasiMa.id("list/one")),
-                ASTNode.Operator(KasiMa.id("const/one")),
-            )
-        )
-
-        val env = InferenceEnv()
-        val result = env.inferNode(constructUntypedIR(program))
-        env.solveConstraints()
-        val substituted = env.substituteNode(result)
-
-        println(substituted)
     }
 }
