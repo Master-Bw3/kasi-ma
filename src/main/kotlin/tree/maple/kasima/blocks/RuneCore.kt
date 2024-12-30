@@ -106,6 +106,7 @@ class RuneCore(settings: Settings) : Block(settings), AxeMineable {
                 val x = compileAndRun(tokens)
                 Text.literal(x.toString())
             } catch (e: Throwable) {
+                e.printStackTrace()
                 if (e is CompilerError.SyntaxError) {
                     e.error
                 } else {

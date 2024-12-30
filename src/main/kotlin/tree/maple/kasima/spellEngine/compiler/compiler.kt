@@ -122,7 +122,10 @@ class InferenceEnv private constructor(node: UntypedIRNode) {
         this.node = inferNode(node)
     }
 
-    fun substitute(): TypedIRNode = substituteNode(node)
+    fun substitute(): TypedIRNode {
+        node = substituteNode(node)
+        return node
+    }
 
     fun solveConstraints(): InferenceEnv {
         typeConstraints.map { it as Constraint.Equality }.forEach { (t1, t2) -> unify(t1, t2) }
@@ -142,7 +145,7 @@ class InferenceEnv private constructor(node: UntypedIRNode) {
                 val inferredFunction = inferNode(node.function)
                 val inferredArg = inferNode(node.argument)
 
-                if (node.argOffset < inferredFunction.type.signature.size - 1 && inferredArg.type.signature.size == 1) {
+                if (node.argOffset < inferredFunction.type.signature.size - 1) {
                     val newSignature = inferredFunction.type.signature.toMutableList()
                     newSignature.removeAt(node.argOffset)
 
@@ -179,7 +182,7 @@ class InferenceEnv private constructor(node: UntypedIRNode) {
 
     private fun inferType(type: Type, environment: MutableMap<UInt, Type>): Type {
         return when (type) {
-            is Type.Named -> Type.Named(type.name, type.rawType, type.genericArgs.map { inferType(it, mutableMapOf()) })
+            is Type.Named -> Type.Named(type.name, type.rawType, type.genericArgs.map { inferType(it, environment) })
 
             is Type.Function -> {
                 val inferred = inferSignature(type.signature)
@@ -256,22 +259,31 @@ class InferenceEnv private constructor(node: UntypedIRNode) {
 fun compileToMethodHandle(node: TypedIRNode): MethodHandle {
     return when (node) {
         is TypedIRNode.Apply -> compileApplyToMethodHandle(node)
-        is TypedIRNode.Operator -> RuneBlockTokenRegistry[node.identifier]!!.operator!!.handle
+        is TypedIRNode.Operator -> RuneBlockTokenRegistry[node.identifier]!!.operator!!.getHandle(node.type)
     }
 }
 
 fun compileApplyToMethodHandle(node: TypedIRNode.Apply): MethodHandle {
     val functionHandle = compileToMethodHandle(node.function)
     val argumentHandle = compileToMethodHandle(node.argument)
+    val filter =
+        if (node.argument.type.signature.size == 1) argumentHandle
+        else MethodHandles.constant(MethodHandle::class.java, argumentHandle)
 
-    return MethodHandles.collectArguments(functionHandle, node.argOffset, argumentHandle)
+    return MethodHandles.collectArguments(functionHandle, node.argOffset, filter)
 }
 
 fun compileToFunction(node: TypedIRNode): Operator =
     object : Operator() {
+        val handle = compileToMethodHandle(node)
+
         override val type = node.type
 
-        override val handle: MethodHandle = compileToMethodHandle(node)
+        override fun getHandle(castedType: Type.Function): MethodHandle {
+            if (this.type != castedType) throw IllegalArgumentException()
+
+            return handle
+        }
     }
 
 fun compileAndRun(program: Collection<Token>): Any {
@@ -282,7 +294,11 @@ fun compileAndRun(program: Collection<Token>): Any {
     return if (function.type.signature.size > 1) {
         function
     } else {
-        function.handle.invoke()
+        function.getHandle(function.type).invoke()
     }
 }
 
+// plus(plus(listof(1), 1),1)
+// plus (plus (listof 1) 1) 1
+//plus(1, plus(1, listof(1)))
+//plus 1 plus 1 (listof 1)

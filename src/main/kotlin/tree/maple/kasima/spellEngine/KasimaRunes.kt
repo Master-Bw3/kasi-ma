@@ -7,10 +7,7 @@ import tree.maple.kasima.KasiMa
 import tree.maple.kasima.api.RuneRegistrationHelper
 import tree.maple.kasima.api.registry.RuneBlockTokenRegistry
 import tree.maple.kasima.spellEngine.compiler.Token
-import tree.maple.kasima.spellEngine.operators.OpAdd
-import tree.maple.kasima.spellEngine.operators.OpListOfOne
-import tree.maple.kasima.spellEngine.operators.OpOne
-import tree.maple.kasima.spellEngine.operators.Operator
+import tree.maple.kasima.spellEngine.operators.*
 
 object KasimaRunes {
 
@@ -18,7 +15,11 @@ object KasimaRunes {
 
     val ADD = register(OpAdd, "add", PALE_OAK_LOG_ID)
     val ONE = register(OpOne, "const/one", PALE_OAK_LOG_ID)
-    val LISTONE = register(OpListOfOne, "list/one", PALE_OAK_LOG_ID)
+
+    val LIST_SINGLETON = register(OpSingleton, "list/singleton", PALE_OAK_LOG_ID)
+    val LIST_PLUS = register(OpListPlus, "list/plus", PALE_OAK_LOG_ID)
+    val LIST_MAP = register(OpListMap, "list/map", PALE_OAK_LOG_ID)
+
 
     val GAP = RuneBlockTokenRegistry.register(Token.Gap, null, { Blocks.PALE_OAK_LOG }, { Blocks.PALE_OAK_LOG }, KasiMa.id("gap"))
 

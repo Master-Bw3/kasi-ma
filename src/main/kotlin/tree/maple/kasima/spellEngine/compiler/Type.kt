@@ -1,5 +1,6 @@
 package tree.maple.kasima.spellEngine.compiler
 
+import java.lang.invoke.MethodHandle
 import kotlin.reflect.KClass
 
 sealed class Type {
@@ -15,9 +16,15 @@ sealed class Type {
 
 }
 
-
-
 object BuiltInType {
     val number = Type.Named("Number", Double::class, listOf())
     fun list(a: Type.Generic) = Type.Named("List", List::class, listOf(a))
 }
+
+fun getRawType(type: Type): Class<*> =
+    when (type) {
+        is Type.Function -> MethodHandle::class
+        is Type.Named -> type.rawType
+        is Type.Var -> Any::class
+        is Type.Generic -> Any::class
+    }.java
