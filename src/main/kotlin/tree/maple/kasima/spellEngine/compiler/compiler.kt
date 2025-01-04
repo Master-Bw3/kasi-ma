@@ -2,28 +2,97 @@ package tree.maple.kasima.spellEngine.compiler
 
 import net.minecraft.text.Text
 import net.minecraft.util.Identifier
+import org.javafp.parsecj.*
+import org.javafp.parsecj.input.Input
 import tree.maple.kasima.KasiMa
 import tree.maple.kasima.api.registry.RuneBlockTokenRegistry
 import tree.maple.kasima.spellEngine.operators.Operator
 import java.lang.invoke.MethodHandle
 import java.lang.invoke.MethodHandles
+import java.util.function.Predicate
 import kotlin.collections.ArrayDeque
 
 
 sealed class Token {
     data class Operator(val operator: Identifier) : Token()
 
+    data class CombinatorSymbol(val symbol: Identifier) : Token()
+
     data object Gap : Token()
+
+    data object Compose : Token()
 
     data object StartGroup : Token()
 
     data object EndGroup : Token()
 }
 
+object KasiMaParser {
+    val expressionParser: Parser.Ref<Token, ASTNode> = Parser.ref()
+
+    val combinatorExprParser: Parser<Token, ASTNode> =
+        Combinators.satisfy(Predicate<Token> { it is Token.CombinatorSymbol })
+            .map { (it as Token.CombinatorSymbol).symbol }
+            .many1()
+            .map { ASTNode.CombinatorExpr(it.stream().toList()) }
+
+    val operatorParser: Parser<Token, ASTNode> =
+        Combinators.satisfy(Predicate<Token> { it is Token.Operator })
+            .map { ASTNode.Operator((it as Token.Operator).operator) }
+
+    val gapParser: Parser<Token, ASTNode> =
+        Combinators.satisfy(Predicate<Token> { it is Token.Gap })
+            .map { ASTNode.Gap }
+
+    val groupParser: Parser<Token, ASTNode> =
+        Combinators.satisfy(Predicate<Token> { it is Token.StartGroup })
+            .then(
+                expressionParser
+                    .bind { expr ->
+                        Combinators.satisfy(Predicate<Token> { it is Token.EndGroup })
+                            .then(Combinators.retn(expr))
+                    })
+
+    val applyParser: Parser<Token, ASTNode> =
+        Combinators.choice(groupParser, combinatorExprParser, operatorParser, gapParser)
+            .many1()
+            .map { ASTNode.ApplyChain(it.stream().toList()) }
+
+    val composeParser: Parser<Token, ASTNode> =
+        Combinators.attempt(
+            Combinators.choice(applyParser, groupParser, combinatorExprParser)
+                .bind { lhs ->
+                    Combinators.satisfy(Predicate<Token> { it is Token.Compose }).then(
+                        expressionParser.bind { rhs -> Combinators.retn(ASTNode.Compose(lhs, rhs)) }
+                    )
+                }
+        )
+
+    val parser: Parser<Token, ASTNode> =
+        expressionParser.bind { expr -> Combinators.eof<Token>().then(Combinators.retn(expr)) }
+
+    init {
+        expressionParser.set(
+            Combinators.choice(
+                composeParser,
+                applyParser,
+                groupParser,
+                combinatorExprParser,
+            )
+
+        )
+    }
+}
+
+
 sealed class ASTNode {
-    data class Group(val members: List<ASTNode>) : ASTNode()
+    data class ApplyChain(val members: List<ASTNode>) : ASTNode()
 
     data class Operator(val operator: Identifier) : ASTNode()
+
+    data class Compose(val rhs: ASTNode, val lhs: ASTNode) : ASTNode()
+
+    data class CombinatorExpr(val expression: List<Identifier>) : ASTNode()
 
     data object Gap : ASTNode()
 }
@@ -37,29 +106,8 @@ sealed class CompilerError(msg: String?) : Throwable(msg) {
     class TypeError(msg: String) : CompilerError(msg)
 }
 
-fun parse(tokens: ArrayDeque<Token>): ASTNode {
-    return when (val firstToken = tokens.removeFirst()) {
+fun parse(tokens: Array<Token>): ASTNode = KasiMaParser.expressionParser.parse(Input.of(tokens)).result
 
-        Token.StartGroup -> ASTNode.Group(parseParens(tokens))
-
-        Token.Gap -> ASTNode.Gap
-
-        is Token.Operator -> ASTNode.Operator(firstToken.operator)
-
-        else -> throw CompilerError.UnknownError()
-    }
-}
-
-fun parseParens(tokens: ArrayDeque<Token>): List<ASTNode> {
-    val args = mutableListOf<ASTNode>()
-
-    while (tokens.first() != Token.EndGroup) {
-        args.add(parse(tokens))
-    }
-
-    tokens.removeFirst()
-    return args
-}
 
 sealed class UntypedIRNode {
     data class Apply(val function: UntypedIRNode, val argument: UntypedIRNode, val argOffset: Int) : UntypedIRNode()
@@ -70,18 +118,20 @@ sealed class UntypedIRNode {
 fun constructUntypedIR(node: ASTNode): UntypedIRNode {
     return when (node) {
         is ASTNode.Operator -> UntypedIRNode.Operator(node.operator)
-        is ASTNode.Group -> chainApply(node.members)
+        is ASTNode.ApplyChain -> chainApply(node.members)
         ASTNode.Gap -> throw CompilerError.SyntaxError(
             Text.translatable(
                 KasiMa.id("illegal_start.gap").toTranslationKey()
             )
         )
+
+        is ASTNode.Compose -> TODO()
+        is ASTNode.CombinatorExpr -> TODO()
     }
 }
 
 
 fun chainApply(members: List<ASTNode>): UntypedIRNode {
-
     var offset = 0
     var acc = constructUntypedIR(members.first())
     for (i in 1..members.indexOfLast { it !is ASTNode.Gap }) {
@@ -288,7 +338,7 @@ fun compileToFunction(node: TypedIRNode): Operator =
 
 fun compileAndRun(program: Collection<Token>): Any {
     val function = compileToFunction(
-        InferenceEnv.inferNode(constructUntypedIR(parse(ArrayDeque(program)))).solveConstraints().substitute()
+        InferenceEnv.inferNode(constructUntypedIR(parse(program.toTypedArray()))).solveConstraints().substitute()
     )
 
     return if (function.type.signature.size > 1) {
@@ -298,7 +348,4 @@ fun compileAndRun(program: Collection<Token>): Any {
     }
 }
 
-// plus(plus(listof(1), 1),1)
-// plus (plus (listof 1) 1) 1
-//plus(1, plus(1, listof(1)))
-//plus 1 plus 1 (listof 1)
+// ((add~1)~add)~1
