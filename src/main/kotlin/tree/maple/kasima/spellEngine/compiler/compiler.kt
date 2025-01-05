@@ -340,20 +340,21 @@ fun compileApplyToMethodHandle(node: TypedIRNode.Apply): MethodHandle {
         if (node.argument.type.signature.size == 1) argumentHandle
         else MethodHandles.constant(MethodHandle::class.java, argumentHandle)
 
-    return if (functionHandle.type().parameterCount() == 0 &&
-        functionHandle.type().returnType() == MethodHandle::class.java
-    ) {
-        val type = node.function.type
-        val methodType =
-            MethodType.methodType(getRawType(type.signature.last()), type.signature.dropLast(1).map { getRawType(it) })
+    val handle = MethodHandles.collectArguments(functionHandle, node.argOffset, filter)
+
+
+    return if (handle.type().parameterCount() == 0 && handle.type().returnType() == MethodHandle::class.java) {
+        val type = node.type
+        val methodType = MethodType.methodType(
+            getRawType(type.signature.last()),
+            type.signature.dropLast(1).map { getRawType(it) }
+        )
 
         val invoker = MethodHandles.invoker(methodType)
-        val collector = MethodHandles.collectArguments(invoker, node.argOffset + 1, filter)
 
-        MethodHandles.filterReturnValue(functionHandle, collector)
-
+        MethodHandles.collectArguments(invoker, 0, handle)
     } else {
-        MethodHandles.collectArguments(functionHandle, node.argOffset, filter)
+        handle
     }
 }
 
