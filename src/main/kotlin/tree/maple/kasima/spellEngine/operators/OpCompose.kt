@@ -9,12 +9,11 @@ object OpCompose : Operator() {
         listOf(
             Type.Function(listOf(Type.Generic(2u), Type.Generic(3u))),
             Type.Function(listOf(Type.Generic(1u), Type.Generic(2u))),
-            Type.Function(listOf(Type.Generic(1u), Type.Generic(3u))),
+            Type.Generic(1u),
+            Type.Generic(3u)
         )
     )
 
     @JvmStatic
-    fun apply(f: MethodHandle, g: MethodHandle): MethodHandle {
-        return MethodHandles.collectArguments(f, 0, g)
-    }
+    fun apply(f: MethodHandle, g: MethodHandle, x: Any): Any = f(g(x))
 }
