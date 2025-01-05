@@ -9,6 +9,7 @@ import tree.maple.kasima.api.registry.BlockTokenRegistry
 import tree.maple.kasima.api.registry.OperatorRegistry
 import tree.maple.kasima.spellEngine.compiler.Token
 import tree.maple.kasima.spellEngine.operators.*
+import tree.maple.kasima.spellEngine.operators.composition.*
 
 object KasimaRunes {
 
@@ -70,6 +71,53 @@ object KasimaRunes {
         Identifier.ofVanilla("block/pale_oak_log_horizontal")
     ).also { OperatorRegistry.register(OpCompose, KasiMa.id("compose")) }
 
+    val CURRY = RuneRegistrationHelper.registerOperator(
+        KasiMa.id("curry"),
+        OpCurry,
+        PALE_OAK_LOG_ID,
+        Identifier.ofVanilla("block/pale_oak_log"),
+        Identifier.ofVanilla("block/pale_oak_log_horizontal")
+    )
+
+    val UNCURRY = RuneRegistrationHelper.registerOperator(
+        KasiMa.id("uncurry"),
+        OpUncurry,
+        PALE_OAK_LOG_ID,
+        Identifier.ofVanilla("block/pale_oak_log"),
+        Identifier.ofVanilla("block/pale_oak_log_horizontal")
+    )
+
+    val DIP = RuneRegistrationHelper.registerOperator(
+        KasiMa.id("dip"),
+        OpDip,
+        PALE_OAK_LOG_ID,
+        Identifier.ofVanilla("block/pale_oak_log"),
+        Identifier.ofVanilla("block/pale_oak_log_horizontal")
+    )
+
+    val RIGHT = RuneRegistrationHelper.registerOperator(
+        KasiMa.id("right"),
+        OpRight,
+        PALE_OAK_LOG_ID,
+        Identifier.ofVanilla("block/pale_oak_log"),
+        Identifier.ofVanilla("block/pale_oak_log_horizontal")
+    )
+
+    val FLIP = RuneRegistrationHelper.registerOperator(
+        KasiMa.id("flip"),
+        OpFlip,
+        PALE_OAK_LOG_ID,
+        Identifier.ofVanilla("block/pale_oak_log"),
+        Identifier.ofVanilla("block/pale_oak_log_horizontal")
+    )
+
+    val FORK = RuneRegistrationHelper.registerOperator(
+        KasiMa.id("fork"),
+        OpFork,
+        PALE_OAK_LOG_ID,
+        Identifier.ofVanilla("block/pale_oak_log"),
+        Identifier.ofVanilla("block/pale_oak_log_horizontal")
+    )
 
 
     fun initialize() {}

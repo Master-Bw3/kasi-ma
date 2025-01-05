@@ -17,8 +17,9 @@ sealed class Type {
 }
 
 object BuiltInType {
-    val number = Type.Named("Number", Double::class, listOf())
-    fun list(a: Type.Generic) = Type.Named("List", List::class, listOf(a))
+    val number = Type.Named("number", Double::class, listOf())
+    fun list(a: Type.Generic) = Type.Named("list", List::class, listOf(a))
+    fun tuple(genericArgs: List<Type>) = Type.Named("tuple", List::class, genericArgs)
 }
 
 fun getRawType(type: Type): Class<*> =
