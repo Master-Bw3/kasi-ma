@@ -2,23 +2,27 @@ package tree.maple.kasima.items
 
 import net.minecraft.item.Item
 import net.minecraft.item.ItemUsageContext
+import net.minecraft.registry.Registries
 import net.minecraft.util.ActionResult
-import tree.maple.kasima.api.registry.RuneBlockTokenRegistry
+import tree.maple.kasima.api.registry.BlockTokenRegistry
 
 class Chisel(settings: Settings?) : Item(settings) {
 
     override fun useOnBlock(context: ItemUsageContext): ActionResult {
         val blockState = context.world.getBlockState(context.blockPos)
         val block = blockState.block
-        val runeEntry = RuneBlockTokenRegistry.firstOrNull { it.block.get() == block }
+        val tokenEntry = BlockTokenRegistry[Registries.BLOCK.getId(block)]
 
-        if (runeEntry != null) {
-            val runeEntries = RuneBlockTokenRegistry.filter { it.material.get() == runeEntry.material.get() }
+        if (tokenEntry != null) {
+            val runeEntries = BlockTokenRegistry.entrySet
+                .map { it.key.value to it.value }
+                .filter { (_, v) -> v.material == tokenEntry.material }
 
-            val index = runeEntries.indexOfFirst { it.block.get() == block }
+            val index = runeEntries.indexOfFirst { (k, _) -> k == Registries.BLOCK.getId(block) }
 
-            val newRuneBlock = runeEntries.getOrElse(index + 1) { runeEntries.first() }
-                .block.get().getStateWithProperties(blockState)
+            val newRuneBlock = Registries.BLOCK
+                .get(runeEntries.getOrElse(index + 1) { runeEntries.first() }.first)
+                .getStateWithProperties(blockState)
 
             context.world.setBlockState(context.blockPos, newRuneBlock)
 

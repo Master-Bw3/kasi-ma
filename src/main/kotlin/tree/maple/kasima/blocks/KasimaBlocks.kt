@@ -3,6 +3,7 @@ package tree.maple.kasima.blocks
 import net.fabricmc.fabric.api.registry.FlammableBlockRegistry
 import net.minecraft.block.AbstractBlock
 import net.minecraft.block.Block
+import net.minecraft.block.Blocks
 import net.minecraft.block.MapColor
 import net.minecraft.block.enums.NoteBlockInstrument
 import net.minecraft.item.BlockItem

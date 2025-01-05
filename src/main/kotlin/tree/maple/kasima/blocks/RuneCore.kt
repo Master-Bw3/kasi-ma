@@ -3,6 +3,7 @@ package tree.maple.kasima.blocks
 import com.mojang.serialization.MapCodec
 import net.minecraft.block.*
 import net.minecraft.entity.player.PlayerEntity
+import net.minecraft.registry.Registries
 import net.minecraft.state.StateManager
 import net.minecraft.state.property.Properties
 import net.minecraft.text.Text
@@ -16,7 +17,7 @@ import net.minecraft.world.WorldView
 import net.minecraft.world.tick.ScheduledTickView
 import tree.maple.kasima.blocks.RuneLog.Companion.RUNE
 import tree.maple.kasima.items.KasimaItems
-import tree.maple.kasima.api.registry.RuneBlockTokenRegistry
+import tree.maple.kasima.api.registry.BlockTokenRegistry
 import tree.maple.kasima.spellEngine.compiler.*
 
 
@@ -90,7 +91,7 @@ class RuneCore(settings: Settings) : Block(settings), AxeMineable {
 
         val startDirection: Direction? = axis.directions.firstOrNull { direction ->
             val pos = corePos.add(direction.vector)
-            RuneBlockTokenRegistry.any { it.block.get() == world.getBlockState(pos).block }
+            BlockTokenRegistry.containsId(Registries.BLOCK.getId(world.getBlockState(pos).block))
         }
 
 
@@ -133,14 +134,14 @@ class RuneCore(settings: Settings) : Block(settings), AxeMineable {
         visited: MutableSet<BlockPos>,
     ): List<Token> {
         val blockState = world.getBlockState(pos)
-        val id = RuneBlockTokenRegistry.entrySet.firstOrNull { it.value.block.get() == blockState.block }?.key?.value
+        val id = Registries.BLOCK.getId(world.getBlockState(pos).block)
 
-        return if (id == null || pos in visited) {
+        return if (!BlockTokenRegistry.containsId(id) || pos in visited) {
             listOf(Token.EndGroup)
         } else {
             visited.add(pos)
 
-            val token = RuneBlockTokenRegistry[id]!!.token
+            val token = BlockTokenRegistry[id]!!.token
             val axis = blockState.get(Properties.AXIS)
 
             val nextBlockDirection = determineDirection(direction, axis, pos, world)
@@ -169,145 +170,7 @@ class RuneCore(settings: Settings) : Block(settings), AxeMineable {
     } else {
         axis.directions.firstOrNull { direction ->
             val offsetPos = pos.add(direction.vector)
-            RuneBlockTokenRegistry.any { it.block.get() == world.getBlockState(offsetPos).block }
+            BlockTokenRegistry.containsId(Registries.BLOCK.getId(world.getBlockState(offsetPos).block))
         } ?: axis.positiveDirection
     }
-
-
-//    fun constructASTFromPhysicalTree(
-//        world: World,
-//        visited: MutableSet<BlockPos>,
-//        pos: BlockPos,
-//        prevDirection: Direction,
-//    ): ASTNode<ValidationState.NotValidated> {
-//        val blockState = world.getBlockState(pos)
-//        val runeEntry = RuneBlockTokenRegistry.first { it.block.get() == blockState.block }
-//        val axis = blockState.get(Properties.AXIS)
-//
-//        val direction = if (prevDirection.axis == axis) {
-//            prevDirection
-//        } else {
-//            axis.directions.firstOrNull { direction ->
-//                val offsetPos = pos.add(direction.vector)
-//                RuneBlockTokenRegistry.any { it.block.get() == world.getBlockState(offsetPos).block }
-//            } ?: axis.positiveDirection
-//        }
-//
-//        return when (runeEntry.rune) {
-//
-//            Rune.Gap -> TODO()
-//
-//            Rune.Apply -> {
-//                val targetPos = pos.add(direction.vector)
-//                visited.add(targetPos)
-//                val target = constructASTFromPhysicalTree(world, visited, targetPos, direction)
-//                val returnType = getReturnType(target.validate()) as SpellFunctionType
-//
-//                val candidates = direction?.let {
-//                    returnType.arguments.indices.map { i ->
-//                        targetPos.add(direction.vector.multiply(i + 1))
-//                    }
-//                } ?: listOf()
-//
-//                if (candidates.any { visited.contains(it) }) throw Exception()
-//
-//                visited.addAll(candidates)
-//
-//                val isCapture = candidates.any { blockPos ->
-//                    val blockState = world.getBlockState(blockPos)
-//                    val rune = RuneBlockTokenRegistry.first { it.block.get() == blockState.block }.rune
-//
-//                    rune is Rune.Gap
-//                }
-//
-//                if (isCapture) {
-//                    ASTNode.Capture(
-//                        target,
-//                        candidates.map { blockPos ->
-//                            val blockState = world.getBlockState(blockPos)
-//                            val rune = RuneBlockTokenRegistry.first { it.block.get() == blockState.block }.rune
-//
-//                            when (rune) {
-//                                Rune.Gap -> null
-//
-//                                else -> constructASTFromPhysicalTree(
-//                                    world,
-//                                    visited,
-//                                    blockPos,
-//                                    direction,
-//                                )
-//
-//                            }
-//                        }
-//                    )
-//                } else {
-//                    ASTNode.Apply(
-//                        target,
-//                        candidates.map { blockPos ->
-//                            constructASTFromPhysicalTree(
-//                                world,
-//                                visited,
-//                                blockPos,
-//                                direction,
-//                            )
-//                        }
-//                    )
-//                }
-//
-//            }
-//
-//            is Rune.Function -> {
-//                val candidates = direction?.let {
-//                    runeEntry.rune.function.arguments.indices.map { i ->
-//                        pos.add(direction.vector.multiply(i + 1))
-//                    }
-//                } ?: listOf()
-//
-//                if (candidates.any { visited.contains(it) }) throw Exception()
-//
-//                visited.addAll(candidates)
-//
-//                val isCapture = candidates.any { blockPos ->
-//                    val blockState = world.getBlockState(blockPos)
-//                    val rune = RuneBlockTokenRegistry.first { it.block.get() == blockState.block }.rune
-//
-//                    rune is Rune.Gap
-//                }
-//
-//                if (isCapture) {
-//                    ASTNode.Capture(
-//                        ASTNode.OperatorRef(RuneBlockTokenRegistry.getId(runeEntry)!!),
-//                        candidates.map { blockPos ->
-//                            val blockState = world.getBlockState(blockPos)
-//                            val rune = RuneBlockTokenRegistry.first { it.block.get() == blockState.block }.rune
-//
-//                            when (rune) {
-//                                Rune.Gap -> null
-//
-//                                else -> constructASTFromPhysicalTree(
-//                                    world,
-//                                    visited,
-//                                    blockPos,
-//                                    direction,
-//                                )
-//
-//                            }
-//                        })
-//                } else {
-//                    ASTNode.Operator(
-//                        RuneBlockTokenRegistry.getId(runeEntry)!!,
-//                        candidates.map { blockPos ->
-//                            constructASTFromPhysicalTree(
-//                                world,
-//                                visited,
-//                                blockPos,
-//                                direction,
-//                            )
-//                        })
-//                }
-//            }
-//
-//        }
-//    }
 }
-

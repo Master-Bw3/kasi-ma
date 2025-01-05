@@ -3,14 +3,11 @@ package tree.maple.kasima
 import net.fabricmc.api.ModInitializer
 import net.minecraft.util.Identifier
 import org.slf4j.LoggerFactory
-import tree.maple.kasima.api.registry.RuneBlockTokenRegistry
+import tree.maple.kasima.api.registry.BlockTokenRegistry
 import tree.maple.kasima.blocks.KasimaBlocks
 import tree.maple.kasima.blocks.blockEntities.KasimaBlockEntities
 import tree.maple.kasima.items.KasimaItems
 import tree.maple.kasima.spellEngine.KasimaRunes
-import tree.maple.kasima.spellEngine.compiler.ASTNode
-import tree.maple.kasima.spellEngine.compiler.InferenceEnv
-import tree.maple.kasima.spellEngine.compiler.constructUntypedIR
 
 
 object KasiMa : ModInitializer {
@@ -27,7 +24,7 @@ object KasiMa : ModInitializer {
         // Proceed with mild caution.
         logger.info("Hello Fabric world!")
 
-        RuneBlockTokenRegistry.initialize()
+        BlockTokenRegistry.initialize()
 
         KasimaItems.initialize()
         KasimaBlocks.initialize()

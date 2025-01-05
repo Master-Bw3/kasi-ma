@@ -16,7 +16,7 @@ object KasimaItems {
         val id = KasiMa.id(name)
 
         val itemKey = RegistryKey.of(RegistryKeys.ITEM, id)
-        val item = constructor.invoke(settings.registryKey(itemKey))
+        val item = constructor(settings.registryKey(itemKey))
 
         return Registry.register(Registries.ITEM, itemKey, item)
     }

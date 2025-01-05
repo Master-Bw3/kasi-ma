@@ -5,12 +5,13 @@ import net.minecraft.util.Identifier
 import org.javafp.parsecj.*
 import org.javafp.parsecj.input.Input
 import tree.maple.kasima.KasiMa
-import tree.maple.kasima.api.registry.RuneBlockTokenRegistry
+import tree.maple.kasima.api.registry.BlockTokenRegistry
+import tree.maple.kasima.api.registry.OperatorRegistry
 import tree.maple.kasima.spellEngine.operators.Operator
 import java.lang.invoke.MethodHandle
 import java.lang.invoke.MethodHandles
+import java.lang.invoke.MethodType
 import java.util.function.Predicate
-import kotlin.collections.ArrayDeque
 
 
 sealed class Token {
@@ -125,7 +126,14 @@ fun constructUntypedIR(node: ASTNode): UntypedIRNode {
             )
         )
 
-        is ASTNode.Compose -> TODO()
+        is ASTNode.Compose -> UntypedIRNode.Apply(
+            UntypedIRNode.Apply(
+                UntypedIRNode.Operator(KasiMa.id("compose")),
+                constructUntypedIR(node.lhs),
+                0
+            ), constructUntypedIR(node.rhs), 0
+        )
+
         is ASTNode.CombinatorExpr -> TODO()
     }
 }
@@ -160,7 +168,11 @@ sealed class TypedIRNode {
 }
 
 sealed class Constraint {
-    data class Equality(val t1: Type, val t2: Type) : Constraint()
+    data class Equality(val t1: Type, val t2: Type) : Constraint() {
+        override fun toString(): String {
+            return "$t1 == $t2"
+        }
+    }
 }
 
 class InferenceEnv private constructor(node: UntypedIRNode) {
@@ -198,6 +210,11 @@ class InferenceEnv private constructor(node: UntypedIRNode) {
                 if (node.argOffset < inferredFunction.type.signature.size - 1) {
                     val newSignature = inferredFunction.type.signature.toMutableList()
                     newSignature.removeAt(node.argOffset)
+                    val newType = if (newSignature.size == 1 && newSignature.first() is Type.Function) {
+                        newSignature.first() as Type.Function
+                    } else {
+                        Type.Function(newSignature)
+                    }
 
                     var param = inferredFunction.type.signature[node.argOffset]
                     if (param !is Type.Function) param = Type.Function(listOf(param))
@@ -207,14 +224,14 @@ class InferenceEnv private constructor(node: UntypedIRNode) {
                         inferredArg.type
                     )
 
-                    TypedIRNode.Apply(inferredFunction, inferredArg, node.argOffset, Type.Function(newSignature))
+                    TypedIRNode.Apply(inferredFunction, inferredArg, node.argOffset, newType)
                 } else {
                     throw CompilerError.TypeError("invalid apply arguments")
                 }
             }
 
             is UntypedIRNode.Operator -> {
-                val opType = RuneBlockTokenRegistry[node.identifier]!!.operator!!.type
+                val opType = OperatorRegistry[node.identifier]!!.type
 
                 val inferredSignature = inferSignature(opType.signature)
 
@@ -225,9 +242,11 @@ class InferenceEnv private constructor(node: UntypedIRNode) {
             }
         }
 
-    private fun inferSignature(signature: List<Type>): List<Type> {
-        val env = mutableMapOf<UInt, Type>()
-        return signature.map { inferType(it, env) }
+    private fun inferSignature(
+        signature: List<Type>,
+        environment: MutableMap<UInt, Type> = mutableMapOf()
+    ): List<Type> {
+        return signature.map { inferType(it, environment) }
     }
 
     private fun inferType(type: Type, environment: MutableMap<UInt, Type>): Type {
@@ -235,7 +254,7 @@ class InferenceEnv private constructor(node: UntypedIRNode) {
             is Type.Named -> Type.Named(type.name, type.rawType, type.genericArgs.map { inferType(it, environment) })
 
             is Type.Function -> {
-                val inferred = inferSignature(type.signature)
+                val inferred = inferSignature(type.signature, environment)
 
                 Type.Function(inferred)
             }
@@ -309,18 +328,33 @@ class InferenceEnv private constructor(node: UntypedIRNode) {
 fun compileToMethodHandle(node: TypedIRNode): MethodHandle {
     return when (node) {
         is TypedIRNode.Apply -> compileApplyToMethodHandle(node)
-        is TypedIRNode.Operator -> RuneBlockTokenRegistry[node.identifier]!!.operator!!.getHandle(node.type)
+        is TypedIRNode.Operator -> OperatorRegistry[node.identifier]!!.getHandle(node.type)
     }
 }
 
 fun compileApplyToMethodHandle(node: TypedIRNode.Apply): MethodHandle {
     val functionHandle = compileToMethodHandle(node.function)
+
     val argumentHandle = compileToMethodHandle(node.argument)
     val filter =
         if (node.argument.type.signature.size == 1) argumentHandle
         else MethodHandles.constant(MethodHandle::class.java, argumentHandle)
 
-    return MethodHandles.collectArguments(functionHandle, node.argOffset, filter)
+    return if (functionHandle.type().parameterCount() == 0 &&
+        functionHandle.type().returnType() == MethodHandle::class.java
+    ) {
+        val type = node.function.type
+        val methodType =
+            MethodType.methodType(getRawType(type.signature.last()), type.signature.dropLast(1).map { getRawType(it) })
+
+        val invoker = MethodHandles.invoker(methodType)
+        val collector = MethodHandles.collectArguments(invoker, node.argOffset + 1, filter)
+
+        MethodHandles.filterReturnValue(functionHandle, collector)
+
+    } else {
+        MethodHandles.collectArguments(functionHandle, node.argOffset, filter)
+    }
 }
 
 fun compileToFunction(node: TypedIRNode): Operator =

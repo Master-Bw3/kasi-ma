@@ -2,20 +2,29 @@ package tree.maple.kasima.api
 
 import net.minecraft.block.Block
 import net.minecraft.block.Blocks
-import net.minecraft.registry.Registries
 import net.minecraft.sound.BlockSoundGroup
 import net.minecraft.util.Identifier
+import tree.maple.kasima.api.registry.OperatorRegistry
 import tree.maple.kasima.blocks.KasimaBlocks
 import tree.maple.kasima.blocks.RuneLog
-import tree.maple.kasima.api.registry.RuneBlockTokenRegistry
+import tree.maple.kasima.api.registry.BlockTokenRegistry
 import tree.maple.kasima.spellEngine.compiler.Token
 import tree.maple.kasima.spellEngine.operators.Operator
 
 object RuneRegistrationHelper {
 
-    fun registerRune(
+    fun registerOperator(
         id: Identifier,
-        function: Operator,
+        operator: Operator,
+        material: Identifier,
+        verticalModel: Identifier,
+        horizontalModel: Identifier
+    ) = registerToken(id, Token.Operator(id), operator, material, verticalModel, horizontalModel)
+
+    fun registerToken(
+        id: Identifier,
+        token: Token,
+        operator: Operator?,
         material: Identifier,
         verticalModel: Identifier,
         horizontalModel: Identifier
@@ -34,13 +43,18 @@ object RuneRegistrationHelper {
         )
 
         //register rune
-        RuneBlockTokenRegistry.register(
-            Token.Operator(id),
-            function,
-            { block },
-            { Registries.BLOCK.get(material) },
+        BlockTokenRegistry.register(
+            token,
+            material,
             id,
         )
+
+        operator?.let {
+            OperatorRegistry.register(
+                it,
+                id
+            )
+        }
 
         return Pair(Token.Operator(id), block)
     }

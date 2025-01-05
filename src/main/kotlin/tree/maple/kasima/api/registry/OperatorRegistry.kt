@@ -13,10 +13,10 @@ import tree.maple.kasima.spellEngine.operators.Operator
 import java.util.function.Supplier
 
 
-private val REGISTRY_KEY: RegistryKey<Registry<RuneRegistryEntry>> =
-    RegistryKey.ofRegistry(KasiMa.id("rune"))
+private val REGISTRY_KEY: RegistryKey<Registry<Operator>> =
+    RegistryKey.ofRegistry(KasiMa.id("operator"))
 
-private val REGISTRY: Registry<RuneRegistryEntry> = FabricRegistryBuilder.from(
+private val REGISTRY: Registry<Operator> = FabricRegistryBuilder.from(
     SimpleRegistry(
         REGISTRY_KEY,
         Lifecycle.stable()
@@ -24,16 +24,14 @@ private val REGISTRY: Registry<RuneRegistryEntry> = FabricRegistryBuilder.from(
 ).buildAndRegister()
 
 
-object RuneBlockTokenRegistry : Registry<RuneRegistryEntry> by REGISTRY {
-    fun register(token: Token, function: Operator?, block: Supplier<Block>, material: Supplier<Block>, id: Identifier): Token {
+object OperatorRegistry : Registry<Operator> by REGISTRY {
+    fun register(operator: Operator, id: Identifier): Operator {
         return Registry.register(
             REGISTRY,
             id,
-            RuneRegistryEntry(token, function, block, material)
-        ).token
+            operator
+        )
     }
 
     fun initialize() {}
 }
-
-data class RuneRegistryEntry(val token: Token, val operator: Operator?, val block: Supplier<Block>, val material: Supplier<Block>)
