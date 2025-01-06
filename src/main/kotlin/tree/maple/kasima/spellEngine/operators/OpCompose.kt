@@ -17,3 +17,6 @@ object OpCompose : Operator() {
     @JvmStatic
     fun <T, U> apply(f: MethodHandle, g: MethodHandle, x: T): U = f(g(x)) as U
 }
+
+// (b -> c) -> (a -> b) -> a -> c
+// (a -> a) -> a -> a -> a

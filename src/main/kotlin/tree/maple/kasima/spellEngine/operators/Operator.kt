@@ -14,10 +14,10 @@ abstract class Operator {
     open fun getHandle(castedType: Type.Function): MethodHandle {
         val lookup = MethodHandles.lookup()
         val returnType = type.signature.last()
-        val methodType = MethodType.methodType(getRawType(returnType), type.signature.dropLast(1).map { getRawType(it) })
+        val methodType = MethodType.methodType(getRawType(returnType), type.signature.toList().dropLast(1).map { getRawType(it) })
 
         val castedReturnType = castedType.signature.last()
-        val castedMethodType = MethodType.methodType(getRawType(castedReturnType), castedType.signature.dropLast(1).map { getRawType(it) })
+        val castedMethodType = MethodType.methodType(getRawType(castedReturnType), castedType.signature.toList().dropLast(1).map { getRawType(it) })
 
         return lookup.findStatic(this::class.java, "apply", methodType).asType(castedMethodType)
     }

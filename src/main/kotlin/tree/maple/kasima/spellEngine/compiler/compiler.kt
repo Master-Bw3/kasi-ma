@@ -5,7 +5,6 @@ import net.minecraft.util.Identifier
 import org.javafp.parsecj.*
 import org.javafp.parsecj.input.Input
 import tree.maple.kasima.KasiMa
-import tree.maple.kasima.api.registry.BlockTokenRegistry
 import tree.maple.kasima.api.registry.OperatorRegistry
 import tree.maple.kasima.spellEngine.operators.Operator
 import java.lang.invoke.MethodHandle
@@ -207,16 +206,15 @@ class InferenceEnv private constructor(node: UntypedIRNode) {
                 val inferredFunction = inferNode(node.function)
                 val inferredArg = inferNode(node.argument)
 
-                if (node.argOffset < inferredFunction.type.signature.size - 1) {
-                    val newSignature = inferredFunction.type.signature.toMutableList()
-                    newSignature.removeAt(node.argOffset)
-                    val newType = if (newSignature.size == 1 && newSignature.first() is Type.Function) {
+                if (node.argOffset < inferredFunction.type.signature.length - 1) {
+                    val newSignature = inferredFunction.type.signature.removeAt(node.argOffset)
+                    val newType = if (newSignature.length == 1 && newSignature.first() is Type.Function) {
                         newSignature.first() as Type.Function
                     } else {
                         Type.Function(newSignature)
                     }
 
-                    var param = inferredFunction.type.signature[node.argOffset]
+                    var param = inferredFunction.type.signature[node.argOffset]!!
                     if (param !is Type.Function) param = Type.Function(listOf(param))
 
                     typeConstraints += Constraint.Equality(
@@ -243,9 +241,9 @@ class InferenceEnv private constructor(node: UntypedIRNode) {
         }
 
     private fun inferSignature(
-        signature: List<Type>,
+        signature: FunctionCons,
         environment: MutableMap<UInt, Type> = mutableMapOf()
-    ): List<Type> {
+    ): FunctionCons {
         return signature.map { inferType(it, environment) }
     }
 
@@ -284,11 +282,40 @@ class InferenceEnv private constructor(node: UntypedIRNode) {
             t1.genericArgs.zip(t2.genericArgs).forEach { (t1, t2) -> unify(t1, t2) }
 
         } else if (t1 is Type.Function && t2 is Type.Function) {
-            if (t1.signature.size != t2.signature.size)
-                throw CompilerError.TypeError("Signature mismatch: ${t1.signature} vs. ${t2.signature}")
-            t1.signature.zip(t2.signature).forEach { (t1, t2) -> unify(t1, t2) }
+            unifyFunction(t1, t2)
+
+        } else if (t1 is Type.Function && t2 is Type.Named) {
+            unifyFunction(t1, Type.Function(listOf(t2)))
+
+        } else if (t1 is Type.Named && t2 is Type.Function) {
+            unifyFunction(Type.Function(listOf(t1)), t2)
 
         } else throw CompilerError.TypeError("Type mismatch: $t1 vs. $t2")
+    }
+
+    private fun unifyFunction(t1: Type.Function, t2: Type.Function) {
+        val (t1Head: Type, t1Tail: Type?) = t1.signature.first() to (t1.signature as? FunctionCons.Arrow)
+            ?.let { Type.Function(it.right) }
+
+        val (t2Head: Type, t2Tail: Type?) = t2.signature.first() to (t2.signature as? FunctionCons.Arrow)
+            ?.let { Type.Function(it.right) }
+
+        if (t1Head is Type.Var && t1Tail == null) {
+            // $0 == a -> b ...
+            unify(t1Head, t2)
+        } else if (t2Head is Type.Var && t2Tail == null) {
+            // a -> b ... == $0
+            unify(t1, t2Head)
+        } else if (t1Tail == null && t2Tail == null) {
+            // () -> a == () -> a
+            unify(t1Head, t2Head)
+
+        } else if (t1Tail != null && t2Tail != null) {
+            // a -> b == a -> b
+            unify(t1Head, t2Head)
+
+            unify(t1Tail, t2Tail)
+        } else throw CompilerError.TypeError("Signature mismatch: ${t1.signature} vs. ${t2.signature}")
     }
 
     private fun substituteNode(node: TypedIRNode): TypedIRNode {
@@ -337,7 +364,7 @@ fun compileApplyToMethodHandle(node: TypedIRNode.Apply): MethodHandle {
 
     val argumentHandle = compileToMethodHandle(node.argument)
     val filter =
-        if (node.argument.type.signature.size == 1) argumentHandle
+        if (node.argument.type.signature.length == 1) argumentHandle
         else MethodHandles.constant(MethodHandle::class.java, argumentHandle)
 
     val handle = MethodHandles.collectArguments(functionHandle, node.argOffset, filter)
@@ -347,7 +374,7 @@ fun compileApplyToMethodHandle(node: TypedIRNode.Apply): MethodHandle {
         val type = node.type
         val methodType = MethodType.methodType(
             getRawType(type.signature.last()),
-            type.signature.dropLast(1).map { getRawType(it) }
+            type.signature.toList().dropLast(1).map { getRawType(it) }
         )
 
         val invoker = MethodHandles.invoker(methodType)
@@ -376,7 +403,7 @@ fun compileAndRun(program: Collection<Token>): Any {
         InferenceEnv.inferNode(constructUntypedIR(parse(program.toTypedArray()))).solveConstraints().substitute()
     )
 
-    return if (function.type.signature.size > 1) {
+    return if (function.type.signature.length > 1) {
         function
     } else {
         function.getHandle(function.type).invoke()

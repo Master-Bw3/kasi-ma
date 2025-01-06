@@ -62,14 +62,22 @@ object KasimaRunes {
         PALE_OAK_LOG_ID
     )
 
-    val COMPOSE = RuneRegistrationHelper.registerToken(
-        KasiMa.id("compose"),
+    val INFIX_COMPOSE = RuneRegistrationHelper.registerToken(
+        KasiMa.id("infix_compose"),
         Token.Compose,
         null,
         PALE_OAK_LOG_ID,
         Identifier.ofVanilla("block/pale_oak_log"),
         Identifier.ofVanilla("block/pale_oak_log_horizontal")
-    ).also { OperatorRegistry.register(OpCompose, KasiMa.id("compose")) }
+    )
+
+    val COMPOSE = RuneRegistrationHelper.registerOperator(
+        KasiMa.id("compose"),
+        OpCompose,
+        PALE_OAK_LOG_ID,
+        Identifier.ofVanilla("block/pale_oak_log"),
+        Identifier.ofVanilla("block/pale_oak_log_horizontal")
+    )
 
     val CURRY = RuneRegistrationHelper.registerOperator(
         KasiMa.id("curry"),
