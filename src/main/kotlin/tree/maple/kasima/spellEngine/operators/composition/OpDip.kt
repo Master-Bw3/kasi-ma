@@ -1,6 +1,8 @@
 package tree.maple.kasima.spellEngine.operators.composition
 
 import tree.maple.kasima.spellEngine.compiler.Type
+import tree.maple.kasima.spellEngine.compiler.bind
+import tree.maple.kasima.spellEngine.compiler.flatten
 import tree.maple.kasima.spellEngine.operators.Operator
 import java.lang.invoke.MethodHandle
 
@@ -17,6 +19,6 @@ object OpDip : Operator() {
 
     @JvmStatic
     fun <T1, T2, T4> apply(f: MethodHandle, collector: MethodHandle, a: T1, b: T2): T4 {
-        return collector(a, f(b)) as T4
+        return collector.bind(a).bind(f(b)).flatten() as T4
     }
 }

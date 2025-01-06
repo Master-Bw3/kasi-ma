@@ -6,7 +6,6 @@ import org.javafp.parsecj.*
 import org.javafp.parsecj.input.Input
 import tree.maple.kasima.KasiMa
 import tree.maple.kasima.api.registry.OperatorRegistry
-import tree.maple.kasima.spellEngine.operators.Operator
 import java.lang.invoke.MethodHandle
 import java.lang.invoke.MethodHandles
 import java.lang.invoke.MethodType
@@ -14,6 +13,8 @@ import java.util.function.Predicate
 
 
 sealed class Token {
+    data class Constant(val value: Any, val type: Type) : Token()
+
     data class Operator(val operator: Identifier) : Token()
 
     data class CombinatorSymbol(val symbol: Identifier) : Token()
@@ -40,6 +41,10 @@ object KasiMaParser {
         Combinators.satisfy(Predicate<Token> { it is Token.Operator })
             .map { ASTNode.Operator((it as Token.Operator).operator) }
 
+    val constantParser: Parser<Token, ASTNode> =
+        Combinators.satisfy(Predicate<Token> { it is Token.Constant })
+            .map { token -> (token as Token.Constant).let { ASTNode.Constant(it.value, it.type) } }
+
     val gapParser: Parser<Token, ASTNode> =
         Combinators.satisfy(Predicate<Token> { it is Token.Gap })
             .map { ASTNode.Gap }
@@ -55,8 +60,12 @@ object KasiMaParser {
 
     val applyParser: Parser<Token, ASTNode> =
         Combinators.choice(groupParser, combinatorExprParser, operatorParser, gapParser)
-            .many1()
-            .map { ASTNode.ApplyChain(it.stream().toList()) }
+            .bind { first ->
+                Combinators.choice(groupParser, combinatorExprParser, operatorParser, gapParser, constantParser)
+                    .many()
+                    .map { ASTNode.ApplyChain(listOf(first) + it.stream().toList()) }
+            }
+
 
     val composeParser: Parser<Token, ASTNode> =
         Combinators.attempt(
@@ -78,8 +87,8 @@ object KasiMaParser {
                 applyParser,
                 groupParser,
                 combinatorExprParser,
+                constantParser,
             )
-
         )
     }
 }
@@ -87,6 +96,8 @@ object KasiMaParser {
 
 sealed class ASTNode {
     data class ApplyChain(val members: List<ASTNode>) : ASTNode()
+
+    data class Constant(val value: Any, val type: Type) : ASTNode()
 
     data class Operator(val operator: Identifier) : ASTNode()
 
@@ -113,6 +124,8 @@ sealed class UntypedIRNode {
     data class Apply(val function: UntypedIRNode, val argument: UntypedIRNode, val argOffset: Int) : UntypedIRNode()
 
     data class Operator(val identifier: Identifier) : UntypedIRNode()
+
+    data class Constant(val value: Any, val type: Type) : UntypedIRNode()
 }
 
 fun constructUntypedIR(node: ASTNode): UntypedIRNode {
@@ -132,6 +145,9 @@ fun constructUntypedIR(node: ASTNode): UntypedIRNode {
                 0
             ), constructUntypedIR(node.rhs), 0
         )
+
+        is ASTNode.Constant -> UntypedIRNode.Constant(node.value, node.type)
+
 
         is ASTNode.CombinatorExpr -> TODO()
     }
@@ -154,16 +170,19 @@ fun chainApply(members: List<ASTNode>): UntypedIRNode {
 }
 
 sealed class TypedIRNode {
-    abstract val type: Type.Function
+    abstract val type: Type
 
     data class Apply(
         val function: TypedIRNode,
         val argument: TypedIRNode,
         val argOffset: Int,
-        override val type: Type.Function
+        override val type: Type
     ) : TypedIRNode()
 
     data class Operator(val identifier: Identifier, override val type: Type.Function) : TypedIRNode()
+
+    data class Constant(val value: Any, override val type: Type) : TypedIRNode()
+
 }
 
 sealed class Constraint {
@@ -205,17 +224,27 @@ class InferenceEnv private constructor(node: UntypedIRNode) {
             is UntypedIRNode.Apply -> {
                 val inferredFunction = inferNode(node.function)
                 val inferredArg = inferNode(node.argument)
+                var functionType = inferredFunction.type
 
-                if (node.argOffset < inferredFunction.type.signature.length - 1) {
-                    val newSignature = inferredFunction.type.signature.removeAt(node.argOffset)
-                    val newType = if (newSignature.length == 1 && newSignature.first() is Type.Function) {
-                        newSignature.first() as Type.Function
-                    } else {
-                        Type.Function(newSignature)
-                    }
 
-                    var param = inferredFunction.type.signature[node.argOffset]!!
-                    if (param !is Type.Function) param = Type.Function(listOf(param))
+                if (functionType is Type.Var) {
+                    val newFunctionType = Type.Function(List(node.argOffset + 2) { createTypeVar() })
+
+                    typeConstraints += Constraint.Equality(
+                        newFunctionType,
+                        functionType,
+                    )
+
+                    functionType = newFunctionType
+                }
+
+                if (functionType !is Type.Function) {
+                    throw CompilerError.TypeError("left argument of apply takes no inputs")
+                }
+
+                if (node.argOffset < functionType.length - 1) {
+                    val newType = functionType.removeAt(node.argOffset)
+                    val param = functionType[node.argOffset]!!
 
                     typeConstraints += Constraint.Equality(
                         param,
@@ -226,24 +255,28 @@ class InferenceEnv private constructor(node: UntypedIRNode) {
                 } else {
                     throw CompilerError.TypeError("invalid apply arguments")
                 }
+
+
             }
 
             is UntypedIRNode.Operator -> {
                 val opType = OperatorRegistry[node.identifier]!!.type
 
-                val inferredSignature = inferSignature(opType.signature)
+                val inferredSignature = inferSignature(opType)
 
                 TypedIRNode.Operator(
                     node.identifier,
-                    Type.Function(inferredSignature)
+                    inferredSignature
                 )
             }
+
+            is UntypedIRNode.Constant -> TypedIRNode.Constant(node.value, node.type)
         }
 
     private fun inferSignature(
-        signature: FunctionCons,
+        signature: Type.Function,
         environment: MutableMap<UInt, Type> = mutableMapOf()
-    ): FunctionCons {
+    ): Type.Function {
         return signature.map { inferType(it, environment) }
     }
 
@@ -251,11 +284,7 @@ class InferenceEnv private constructor(node: UntypedIRNode) {
         return when (type) {
             is Type.Named -> Type.Named(type.name, type.rawType, type.genericArgs.map { inferType(it, environment) })
 
-            is Type.Function -> {
-                val inferred = inferSignature(type.signature, environment)
-
-                Type.Function(inferred)
-            }
+            is Type.Function -> inferSignature(type, environment)
 
             is Type.Generic -> environment.getOrPut(type.id, ::createTypeVar)
 
@@ -284,38 +313,16 @@ class InferenceEnv private constructor(node: UntypedIRNode) {
         } else if (t1 is Type.Function && t2 is Type.Function) {
             unifyFunction(t1, t2)
 
-        } else if (t1 is Type.Function && t2 is Type.Named) {
-            unifyFunction(t1, Type.Function(listOf(t2)))
-
-        } else if (t1 is Type.Named && t2 is Type.Function) {
-            unifyFunction(Type.Function(listOf(t1)), t2)
-
         } else throw CompilerError.TypeError("Type mismatch: $t1 vs. $t2")
     }
 
     private fun unifyFunction(t1: Type.Function, t2: Type.Function) {
-        val (t1Head: Type, t1Tail: Type?) = t1.signature.first() to (t1.signature as? FunctionCons.Arrow)
-            ?.let { Type.Function(it.right) }
+        val (t1Head: Type, t1Tail: Type) = t1.left to t1.right
 
-        val (t2Head: Type, t2Tail: Type?) = t2.signature.first() to (t2.signature as? FunctionCons.Arrow)
-            ?.let { Type.Function(it.right) }
+        val (t2Head: Type, t2Tail: Type) = t2.left to t2.right
 
-        if (t1Head is Type.Var && t1Tail == null) {
-            // $0 == a -> b ...
-            unify(t1Head, t2)
-        } else if (t2Head is Type.Var && t2Tail == null) {
-            // a -> b ... == $0
-            unify(t1, t2Head)
-        } else if (t1Tail == null && t2Tail == null) {
-            // () -> a == () -> a
-            unify(t1Head, t2Head)
-
-        } else if (t1Tail != null && t2Tail != null) {
-            // a -> b == a -> b
-            unify(t1Head, t2Head)
-
-            unify(t1Tail, t2Tail)
-        } else throw CompilerError.TypeError("Signature mismatch: ${t1.signature} vs. ${t2.signature}")
+        unify(t1Head, t2Head)
+        unify(t1Tail, t2Tail)
     }
 
     private fun substituteNode(node: TypedIRNode): TypedIRNode {
@@ -324,27 +331,29 @@ class InferenceEnv private constructor(node: UntypedIRNode) {
                 substituteNode(node.function),
                 substituteNode(node.argument),
                 node.argOffset,
-                substituteFunctionType(node.type)
+                substituteType(node.type)
             )
 
             is TypedIRNode.Operator -> TypedIRNode.Operator(
                 node.identifier,
-                substituteFunctionType(node.type)
+                substituteFunction(node.type)
             )
+
+            is TypedIRNode.Constant -> node
         }
     }
 
     private fun substituteType(type: Type): Type {
         return when (type) {
-            is Type.Function -> substituteFunctionType(type)
+            is Type.Function -> substituteFunction(type)
             is Type.Generic -> type
             is Type.Named -> Type.Named(type.name, type.rawType, type.genericArgs.map { substituteType(it) })
             is Type.Var -> substitutions[type.index]
         }
     }
 
-    private fun substituteFunctionType(type: Type.Function) =
-        Type.Function(type.signature.map { substituteType(it) })
+    private fun substituteFunction(type: Type.Function): Type.Function =
+        type.map { substituteType(it) }
 
     companion object {
         fun inferNode(node: UntypedIRNode) = InferenceEnv(node)
@@ -356,26 +365,33 @@ fun compileToMethodHandle(node: TypedIRNode): MethodHandle {
     return when (node) {
         is TypedIRNode.Apply -> compileApplyToMethodHandle(node)
         is TypedIRNode.Operator -> OperatorRegistry[node.identifier]!!.getHandle(node.type)
+        is TypedIRNode.Constant -> MethodHandles.constant(getRawType(node.type), node.value)
     }
 }
 
 fun compileApplyToMethodHandle(node: TypedIRNode.Apply): MethodHandle {
     val functionHandle = compileToMethodHandle(node.function)
 
-    val argumentHandle = compileToMethodHandle(node.argument)
-    val filter =
-        if (node.argument.type.signature.length == 1) argumentHandle
-        else MethodHandles.constant(MethodHandle::class.java, argumentHandle)
+    var argumentHandle = compileToMethodHandle(node.argument)
+    if (node.argument.type is Type.Function) argumentHandle =
+        MethodHandles.constant(MethodHandle::class.java, argumentHandle)
 
-    val handle = MethodHandles.collectArguments(functionHandle, node.argOffset, filter)
+    val handle = MethodHandles.collectArguments(functionHandle, node.argOffset, argumentHandle)
 
 
     return if (handle.type().parameterCount() == 0 && handle.type().returnType() == MethodHandle::class.java) {
         val type = node.type
-        val methodType = MethodType.methodType(
-            getRawType(type.signature.last()),
-            type.signature.toList().dropLast(1).map { getRawType(it) }
-        )
+        val methodType = when (type) {
+            is Type.Function -> {
+                val signature = type.toList()
+                MethodType.methodType(
+                    getRawType(signature.last()),
+                    signature.dropLast(1).map { getRawType(it) }
+                )
+            }
+
+            else -> MethodType.methodType(getRawType(type))
+        }
 
         val invoker = MethodHandles.invoker(methodType)
 
@@ -385,29 +401,26 @@ fun compileApplyToMethodHandle(node: TypedIRNode.Apply): MethodHandle {
     }
 }
 
-fun compileToFunction(node: TypedIRNode): Operator =
-    object : Operator() {
-        val handle = compileToMethodHandle(node)
-
-        override val type = node.type
-
-        override fun getHandle(castedType: Type.Function): MethodHandle {
-            if (this.type != castedType) throw IllegalArgumentException()
-
-            return handle
-        }
-    }
 
 fun compileAndRun(program: Collection<Token>): Any {
-    val function = compileToFunction(
-        InferenceEnv.inferNode(constructUntypedIR(parse(program.toTypedArray()))).solveConstraints().substitute()
-    )
+    val node = InferenceEnv.inferNode(constructUntypedIR(parse(program.toTypedArray()))).solveConstraints().substitute()
+    val handle = compileToMethodHandle(node)
 
-    return if (function.type.signature.length > 1) {
-        function
+    return if (node.type is Type.Function) {
+        handle
     } else {
-        function.getHandle(function.type).invoke()
+        handle.invoke()
     }
 }
 
-// ((add~1)~add)~1
+
+fun <T> MethodHandle.bind(x: T): MethodHandle = MethodHandles.insertArguments(this, 0, x)
+
+fun MethodHandle.flatten(): Any =
+    if (this.type().parameterCount() == 0) this.invoke()
+    else this
+
+
+
+//(n -> n) -> n -> a
+//n -> n -> n

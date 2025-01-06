@@ -1,6 +1,8 @@
 package tree.maple.kasima.spellEngine.operators
 
 import tree.maple.kasima.spellEngine.compiler.Type
+import tree.maple.kasima.spellEngine.compiler.bind
+import tree.maple.kasima.spellEngine.compiler.flatten
 import java.lang.invoke.MethodHandle
 import java.lang.invoke.MethodHandles
 
@@ -15,7 +17,8 @@ object OpCompose : Operator() {
     )
 
     @JvmStatic
-    fun <T, U> apply(f: MethodHandle, g: MethodHandle, x: T): U = f(g(x)) as U
+    fun <T: Any, U: Any> apply(f: MethodHandle, g: MethodHandle, x: T): U = f.bind(g.bind(x).flatten()).flatten() as U
+
 }
 
 // (b -> c) -> (a -> b) -> a -> c

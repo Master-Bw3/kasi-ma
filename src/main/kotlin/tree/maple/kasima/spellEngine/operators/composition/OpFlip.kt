@@ -1,6 +1,8 @@
 package tree.maple.kasima.spellEngine.operators.composition
 
 import tree.maple.kasima.spellEngine.compiler.Type
+import tree.maple.kasima.spellEngine.compiler.bind
+import tree.maple.kasima.spellEngine.compiler.flatten
 import tree.maple.kasima.spellEngine.operators.Operator
 import java.lang.invoke.MethodHandle
 
@@ -15,5 +17,6 @@ object OpFlip : Operator() {
     )
 
     @JvmStatic
-    fun <T1, T2, T3> apply(f: MethodHandle , a: T1, b: T2): T3 = f(b, a) as T3
+    fun <T1, T2, T3> apply(f: MethodHandle , a: T1, b: T2): T3 =
+        f.bind(b).bind(a).flatten() as T3
 }

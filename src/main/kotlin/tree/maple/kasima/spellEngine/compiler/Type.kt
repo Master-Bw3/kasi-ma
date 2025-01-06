@@ -3,134 +3,118 @@ package tree.maple.kasima.spellEngine.compiler
 import java.lang.invoke.MethodHandle
 import kotlin.reflect.KClass
 
-interface BaseType
-
 sealed class Type {
-    data class Named(val name: String, val rawType: KClass<*>, val genericArgs: List<Type>) : Type(), BaseType {
+    data class Named(val name: String, val rawType: KClass<*>, val genericArgs: List<Type>) : Type() {
         override fun toString(): String = "$name<${genericArgs.joinToString(", ")}>"
     }
 
-    data class Function(val signature: FunctionCons) : Type() {
-        companion object {
-            operator fun invoke(signature: List<Type>) = Function(listToFunctionCons(signature))
-        }
-    }
-
     //type var that has not been inferred yet
-    data class Var(val index: Int) : Type(), BaseType {
+    data class Var(val index: Int) : Type() {
         override fun toString(): String = "$$index"
     }
 
     //generic type that stands in place of any type
-    data class Generic(val id: UInt) : Type(), BaseType {
+    data class Generic(val id: UInt) : Type() {
         override fun toString(): String = "T$id"
     }
-}
 
-sealed class FunctionCons {
-    data class Leaf<T>(val type: T) : FunctionCons() where T : Type, T : BaseType {
-        override fun toString(): String = type.toString()
-    }
+    data class Function(val left: Type, val right: Type) : Type() {
+        companion object {
+            operator fun invoke(signature: List<Type>) = signatureToFunction(signature)
+        }
 
-    data class Arrow(val left: FunctionCons, val right: FunctionCons) : FunctionCons() {
         override fun toString(): String {
             val x = when (this.left) {
-                is Arrow -> "(${this.left})"
-                is Leaf<*> -> this.left.toString()
+                is Function -> "(${this.left})"
+                else -> this.left.toString()
             }
             return "$x -> $right"
         }
-    }
 
-    val length: Int
-        get() = when (this) {
-            is Leaf<*> -> 1
-            is Arrow -> 1 + this.right.length
-        }
-
-    fun removeAt(index: Int): FunctionCons = when (this) {
-        is Leaf<*> -> this
-        is Arrow -> if (index == 0) {
-            this.right
-        } else {
-            Arrow(this.left, this.right.removeAt(index.dec()))
-        }
-    }
-
-    operator fun get(index: Int): Type? = when (this) {
-        is Leaf<*> -> if (index == 0) this.type else null
-        is Arrow -> if (index == 0) {
-            this.first()
-        } else {
-            this.right[index.dec()]
-        }
-    }
-
-    fun first(): Type = when (this) {
-        is Leaf<*> -> this.type
-        is Arrow -> when (this.left) {
-            is Leaf<*> -> this.left.type
-            is Arrow -> Type.Function(this.left)
-        }
-    }
-
-    fun last(): Type = when (this) {
-        is Leaf<*> -> this.type
-        is Arrow -> when (this.right) {
-            is Leaf<*> -> this.right.type
-            is Arrow -> this.right.last()
-        }
-    }
-
-    fun map(transform: (Type) -> Type): FunctionCons =
-        when (this) {
-            is Arrow -> Arrow(this.left.map(transform), this.right.map(transform))
-            is Leaf<*> -> when (val result = transform(this.type)) {
-                is BaseType -> Leaf(result)
-
-                is Type.Function -> result.signature
-
-                else -> throw Error("unreachable")
+        val length: Int
+            get() = 1 + when (this.right) {
+                is Function -> this.right.length
+                else -> 1
             }
+
+        fun removeAt(index: Int): Type =
+            if (index == 0) {
+                this.right
+            } else if (this.right is Function) {
+                Function(this.left, this.right.removeAt(index.dec()))
+            } else if (index == 1) {
+                this.left
+            } else {
+                throw IndexOutOfBoundsException()
+            }
+
+
+        operator fun get(index: Int): Type? =
+            if (index == 0) {
+                this.left
+            } else if (this.right is Function) {
+                this.right[index.dec()]
+            } else if (index == 1) {
+                this.right
+            } else {
+                null
+            }
+
+        fun first(): Type = this.left
+
+        fun last(): Type =
+            when (this.right) {
+                is Function -> this.right.last()
+                else -> this.right
+            }
+
+        fun map(transform: (Type) -> Type): Function =
+            when (this.right) {
+                is Function -> Function(transform(this.left), this.right.map(transform))
+                else -> Function(transform(this.left), transform(this.right))
+            }
+
+        fun toList(): List<Type> =
+            when (this.right) {
+                is Function -> listOf(this.left) + this.right.toList()
+                else -> listOf(this.left, this.right)
+            }
+
+        fun toList(maxSize: Int): List<Type> {
+            require(maxSize > 0)
+            return toListTruncatedAt(maxSize - 1)
         }
 
-    fun toList(): List<Type> = when (this) {
-        is Leaf<*> -> listOf(this.type)
+        private fun toListTruncatedAt(index: Int): List<Type> =
+            if (index == 0) {
+                listOf(this)
+            } else when (this.right) {
+                is Function -> listOf(this.left) + this.right.toListTruncatedAt(index - 1)
 
-        is Arrow -> when (this.left) {
-            is Leaf<*> -> listOf(this.left.type) + this.right.toList()
-            is Arrow -> listOf(Type.Function(this.left)) + this.right.toList()
-        }
+                else -> listOf(this.left, this.right)
+            }
+
+
     }
 }
 
-fun listToFunctionCons(signature: List<Type>): FunctionCons {
-    var functionCons: FunctionCons =
-        when (val last = signature.last()) {
-            is BaseType -> FunctionCons.Leaf(last)
 
-            is Type.Function -> last.signature
+fun signatureToFunction(signature: List<Type>): Type.Function {
+    require(signature.size > 1)
 
-            else -> throw Error("unreachable")
-        }
+    var function = signature.last()
+
+    signature.dropLast(1).foldRight(function) { type, acc ->
+        Type.Function(type, acc)
+    }
 
     for (i in signature.size - 2 downTo 0) {
         val type = signature[i]
 
-        functionCons = when (type) {
-            is BaseType -> FunctionCons.Arrow(FunctionCons.Leaf(type), functionCons)
-
-            is Type.Function -> FunctionCons.Arrow(type.signature, functionCons)
-
-            else -> throw Error("unreachable")
-        }
+        function = Type.Function(type, function)
     }
 
-    return functionCons
-}
-
-fun main() {
-    println(listToFunctionCons(listOf(BuiltInType.number, BuiltInType.list(BuiltInType.number))))
+    return function as Type.Function
 }
 
 

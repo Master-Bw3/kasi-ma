@@ -2,6 +2,8 @@ package tree.maple.kasima.spellEngine.operators
 
 import tree.maple.kasima.spellEngine.compiler.BuiltInType
 import tree.maple.kasima.spellEngine.compiler.Type
+import tree.maple.kasima.spellEngine.compiler.bind
+import tree.maple.kasima.spellEngine.compiler.flatten
 import java.lang.invoke.MethodHandle
 
 object OpListMap : Operator() {
@@ -14,6 +16,6 @@ object OpListMap : Operator() {
     )
 
     @JvmStatic
-    fun <T, U> apply(list: List<T>, mapper: MethodHandle): List<U> = list.map { mapper.invoke(it) as U }
+    fun <T, U> apply(list: List<T>, mapper: MethodHandle): List<U> = list.map { mapper.bind(it).flatten() as U }
 
 }

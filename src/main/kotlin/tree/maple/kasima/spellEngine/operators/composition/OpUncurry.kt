@@ -2,6 +2,8 @@ package tree.maple.kasima.spellEngine.operators.composition
 
 import tree.maple.kasima.spellEngine.compiler.BuiltInType
 import tree.maple.kasima.spellEngine.compiler.Type
+import tree.maple.kasima.spellEngine.compiler.bind
+import tree.maple.kasima.spellEngine.compiler.flatten
 import tree.maple.kasima.spellEngine.operators.Operator
 import java.lang.invoke.MethodHandle
 
@@ -15,5 +17,5 @@ object OpUncurry : Operator() {
     )
 
     @JvmStatic
-    fun <T> apply(f: MethodHandle, x: List<Any>): T = f(x.first(), x.last()) as T
+    fun <T> apply(f: MethodHandle, x: List<Any>): T = f.bind(x.first()).bind(x.last()).flatten() as T
 }

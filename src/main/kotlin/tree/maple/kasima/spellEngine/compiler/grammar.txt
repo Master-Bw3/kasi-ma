@@ -1,13 +1,14 @@
 program = { SOI ~ expr ~ space? ~ EOI }
 
-expr = _{ (compose | apply_chain | group | combinator_expr | ident) }
+expr = _{ (compose | apply_chain | group | combinator_expr | value | ident) }
 
 compose     =  { (apply_chain | group | combinator_expr | ident) ~ space ~ ">>" ~ space ~ expr }
-apply_chain =  { (group | combinator_expr | ident) ~ (space ~ (group | combinator_expr | ident))+ }
+apply_chain =  { (group | combinator_expr | ident) ~ (space ~ (group | combinator_expr | value | ident))+ }
 group       = _{ "(" ~ space? ~ expr ~ space? ~ ")" }
 
 combinator_expr = { combinator_op+ }
 combinator_op   = { "⊙" | ":" }
 ident           = { ASCII_ALPHA+ }
+value           = { ASCII_DIGIT+ }
 
 space = _{ (SPACE_SEPARATOR | NEWLINE)+ }

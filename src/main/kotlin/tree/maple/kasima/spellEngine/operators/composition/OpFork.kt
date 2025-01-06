@@ -1,6 +1,8 @@
 package tree.maple.kasima.spellEngine.operators.composition
 
 import tree.maple.kasima.spellEngine.compiler.Type
+import tree.maple.kasima.spellEngine.compiler.bind
+import tree.maple.kasima.spellEngine.compiler.flatten
 import tree.maple.kasima.spellEngine.operators.Operator
 import java.lang.invoke.MethodHandle
 
@@ -17,6 +19,9 @@ object OpFork : Operator() {
 
     @JvmStatic
     fun <T1, T4> apply(f: MethodHandle, g: MethodHandle, collector: MethodHandle, x: T1): T4 {
-        return collector(f(x), g(x)) as T4
+        return collector
+            .bind(f.bind(x).flatten())
+            .bind(g.bind(x).flatten())
+            .flatten() as T4
     }
 }

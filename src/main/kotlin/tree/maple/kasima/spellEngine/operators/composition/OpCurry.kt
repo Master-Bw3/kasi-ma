@@ -2,6 +2,8 @@ package tree.maple.kasima.spellEngine.operators.composition
 
 import tree.maple.kasima.spellEngine.compiler.BuiltInType
 import tree.maple.kasima.spellEngine.compiler.Type
+import tree.maple.kasima.spellEngine.compiler.bind
+import tree.maple.kasima.spellEngine.compiler.flatten
 import tree.maple.kasima.spellEngine.operators.Operator
 import java.lang.invoke.MethodHandle
 
@@ -16,5 +18,5 @@ object OpCurry : Operator() {
     )
 
     @JvmStatic
-    fun <T, U, V> apply(f: MethodHandle, a: T, b: U): V = f(listOf(a, b)) as V
+    fun <T, U, V> apply(f: MethodHandle, a: T, b: U): V = f.bind(listOf(a, b)).flatten() as V
 }

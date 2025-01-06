@@ -7,6 +7,7 @@ import tree.maple.kasima.KasiMa
 import tree.maple.kasima.api.RuneRegistrationHelper
 import tree.maple.kasima.api.registry.BlockTokenRegistry
 import tree.maple.kasima.api.registry.OperatorRegistry
+import tree.maple.kasima.spellEngine.compiler.BuiltInType
 import tree.maple.kasima.spellEngine.compiler.Token
 import tree.maple.kasima.spellEngine.operators.*
 import tree.maple.kasima.spellEngine.operators.composition.*
@@ -23,9 +24,10 @@ object KasimaRunes {
         Identifier.ofVanilla("block/pale_oak_log_horizontal")
     )
 
-    val ONE = RuneRegistrationHelper.registerOperator(
+    val ONE = RuneRegistrationHelper.registerToken(
         KasiMa.id("const/one"),
-        OpOne,
+        Token.Constant(1, BuiltInType.number),
+        null,
         PALE_OAK_LOG_ID,
         Identifier.ofVanilla("block/pale_oak_log"),
         Identifier.ofVanilla("block/pale_oak_log_horizontal")
